@@ -1,2 +1,3 @@
 # PPO
-PyTorch implementation of PPO
+PyTorch implementation of Proximal Policy Optimization
+
