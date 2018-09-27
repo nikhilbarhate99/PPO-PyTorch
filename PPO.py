@@ -109,12 +109,6 @@ class PPO:
         self.policy_old.load_state_dict(self.policy_target.state_dict())
         
 def main():
-    # Defaults parameters:
-    #    gamma = 0.99
-    #    lr = 0.02
-    #    betas = (0.9, 0.999)
-    #    random_seed = 543
-    
     render = False
     gamma = 0.99
     lr = 0.02
@@ -173,7 +167,5 @@ def main():
 
 if __name__ == '__main__':
     main()
-    
-    
     
     
