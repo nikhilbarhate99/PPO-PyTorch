@@ -12,18 +12,17 @@ class Model(nn.Module):
         self.action_layer = nn.Linear(128, 4)
         self.value_layer = nn.Linear(128, 1)
         
-        # Memory :
+        # Memory:
         self.actions = []
         self.states = []
         self.logprobs = []
         self.state_values = []
         self.rewards = []
         
-    def forward(self):
+    def forward(self, state):
         raise NotImplementedError
         
     def act(self, state): 
-
         state = torch.from_numpy(state).float()
         state = self.affine(state)
         
@@ -33,7 +32,6 @@ class Model(nn.Module):
         action_distribution = Categorical(action_probs)
         action = action_distribution.sample()
         
-        self.states.append(state)
         self.actions.append(action)
         self.logprobs.append(action_distribution.log_prob(action))
         self.state_values.append(state_value)
@@ -41,9 +39,13 @@ class Model(nn.Module):
         return action.item()   
     
     def evaluateAction(self, state, action):
+        state = torch.from_numpy(state).float()
+        state = self.affine(state)
+        
         action_probs = F.softmax(self.action_layer(state))
         action_distribution = Categorical(action_probs)
         logprob = action_distribution.log_prob(action)
+        
         self.logprobs.append(logprob)
          
     def clearMemory(self):
@@ -53,45 +55,24 @@ class Model(nn.Module):
         del self.state_values[:]
         del self.rewards[:]
         
-class Experience:
-    def __init__(self):
-        # Memory :
-        self.actions = []
-        self.states = []
-        self.logprobs = []
-        self.state_values = []
-        self.rewards = []
-    
-    def backupExperience(self, policy):
-        for action, state, logprob, value, reward in zip(
-                policy.actions, policy.states, policy.logprobs,
-                policy.state_values, policy.rewards):
-            
-            self.actions.append(action)
-            self.states.append(state)
-            self.logprobs.append(logprob)
-            self.state_values.append(value)
-            self.rewards.append(reward)
-        
 class PPO:
-    def __init__(self, lr, betas, gamma, eps_clip):
+    def __init__(self, lr, betas, gamma, K_epochs, eps_clip):
         self.lr = lr
         self.betas = betas
         self.gamma = gamma
         self.eps_clip = eps_clip
+        self.K_epochs = K_epochs
         
         self.policy = Model()
         self.optimizer = torch.optim.Adam(self.policy.parameters(),
                                               lr=lr, betas=betas)
+        self.policy_old = Model()
         
-    def update(self):
-        exp_old = Experience()
-        exp_old.backupExperience(self.policy)
-        
+    def update(self):   
         # Monte Carlo estimate of state rewards:
         rewards = []
         discounted_reward = 0
-        for reward in self.policy.rewards[::-1]:
+        for reward in self.policy_old.rewards[::-1]:
             discounted_reward = reward + (self.gamma * discounted_reward)
             rewards.insert(0, discounted_reward)
         
@@ -99,50 +80,39 @@ class PPO:
         rewards = torch.tensor(rewards)
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-5 )
         
-        # Updating the policy_theta_old to policy_theta :
-        loss_old = 0
-        for logprob, value, reward in zip(self.policy.logprobs, 
-                                          self.policy.state_values, 
-                                          rewards):
-            advantage = reward - value.item()
-            action_loss = -logprob * advantage
-            value_loss = F.smooth_l1_loss(value, reward)
-            loss_old += (action_loss + value_loss)
-        
-        self.optimizer.zero_grad()
-        loss_old.backward(retain_graph=True)
-        self.optimizer.step()
-        self.policy.clearMemory()
-        
-        # Evaluating old actions :
-        for state, action in zip(exp_old.states, exp_old.actions):
-            self.policy.evaluateAction(state, action)
+        # Optimize policy for K epochs:
+        for _ in range(self.K_epochs):
+            # Evaluating old actions :
+            for state, action in zip(self.policy_old.states, 
+                                     self.policy_old.actions):
+                self.policy.evaluateAction(state, action)
             
-
-        # Finding the ratio (prob_target/prob_old):
-        ratios = []
-        for logprob, logprob_old in zip(self.policy.logprobs, 
-                                        exp_old.logprobs):
-            ratios.append(torch.exp(logprob - logprob_old))
-        
-        # Finding Surrogate Loss:
-        loss = 0
-        for ratio, value, reward in zip(ratios, exp_old.state_values,
-                                        rewards):
-            advantage = reward - value.item()
-            surr1 = ratio * advantage
-            surr2 = torch.clamp(ratio, 1-self.eps_clip, 1+self.eps_clip) * advantage
-            action_loss = -torch.min(surr1, surr2)
-            value_loss = F.smooth_l1_loss(value, reward)
-            loss += (action_loss + value_loss)
+            # Finding the ratio (pi_theta / pi_theta__old):
+            ratios = []
+            for logprob, logprob_old in zip(self.policy.logprobs, 
+                                            self.policy_old.logprobs):
+                ratios.append(torch.exp(logprob - logprob_old))
             
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-        self.policy.clearMemory()
+            # Finding Surrogate Loss:
+            loss = 0
+            for ratio, value, reward in zip(ratios, self.policy_old.state_values,
+                                            rewards):
+                advantage = reward - value.item()
+                surr1 = ratio * advantage
+                surr2 = torch.clamp(ratio, 1-self.eps_clip, 1+self.eps_clip) * advantage
+                action_loss = -torch.min(surr1, surr2)
+                value_loss = F.smooth_l1_loss(value, reward)
+                loss += (action_loss + value_loss)
+            
+            self.optimizer.zero_grad()
+            loss.backward(retain_graph=True)
+            self.optimizer.step()
+            self.policy.clearMemory()
+        
+        self.policy_old.clearMemory()
         
         # Copy new weights into old policy:
-        #self.policy_old.load_state_dict(self.policy.state_dict())
+        self.policy_old.load_state_dict(self.policy.state_dict())
         
 def main():
     # Good parameters:
@@ -153,9 +123,10 @@ def main():
     #    random_seed = 543
     
     render = False
-    gamma = 0.99
     lr = 0.02
     betas = (0.9, 0.999)
+    gamma = 0.99
+    K_epochs = 5 # update policy for K epochs
     eps_clip = 0.2
     random_seed = 543
     torch.manual_seed(random_seed)
@@ -163,7 +134,7 @@ def main():
     env = gym.make('LunarLander-v2')
     env.seed(random_seed)
     
-    ppo = PPO(lr, betas, gamma, eps_clip)
+    ppo = PPO(lr, betas, gamma, K_epochs, eps_clip)
     print(lr,betas)
     
     running_reward = 0
@@ -171,10 +142,14 @@ def main():
     for i_episode in range(1, 10000):
         state = env.reset()
         for t in range(10000):
-            # Run policy:
-            action = ppo.policy.act(state)
+            # Run policy_old:
+            action = ppo.policy_old.act(state)
             state, reward, done, _ = env.step(action)
-            ppo.policy.rewards.append(reward)
+            
+            # Saving state and reward:
+            ppo.policy_old.states.append(state)
+            ppo.policy_old.rewards.append(reward)
+            
             running_reward += reward
             if render and i_episode>1500:
                 env.render()
