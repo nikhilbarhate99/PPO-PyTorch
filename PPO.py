@@ -38,15 +38,17 @@ class Model(nn.Module):
         
         return action.item()   
     
-    def evaluateAction(self, state, action):
+    def evaluate(self, state, action):
         state = torch.from_numpy(state).float()
         state = self.affine(state)
         
+        state_value = self.value_layer(state)
+        
         action_probs = F.softmax(self.action_layer(state))
         action_distribution = Categorical(action_probs)
-        logprob = action_distribution.log_prob(action)
         
-        self.logprobs.append(logprob)
+        self.logprobs.append(action_distribution.log_prob(action))
+        self.state_values.append(state_value)
          
     def clearMemory(self):
         del self.actions[:]
@@ -78,14 +80,14 @@ class PPO:
         
         # Normalizing the rewards:
         rewards = torch.tensor(rewards)
-        rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-5 )
+        rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-5)
         
         # Optimize policy for K epochs:
         for _ in range(self.K_epochs):
-            # Evaluating old actions :
+            # Evaluating old actions and values :
             for state, action in zip(self.policy_old.states, 
                                      self.policy_old.actions):
-                self.policy.evaluateAction(state, action)
+                self.policy.evaluate(state, action)
             
             # Finding the ratio (pi_theta / pi_theta__old):
             ratios = []
@@ -95,7 +97,8 @@ class PPO:
             
             # Finding Surrogate Loss:
             loss = 0
-            for ratio, value, reward in zip(ratios, self.policy_old.state_values,
+            action_loss = 0
+            for ratio, value, reward in zip(ratios, self.policy.state_values,
                                             rewards):
                 advantage = reward - value.item()
                 surr1 = ratio * advantage
@@ -103,7 +106,7 @@ class PPO:
                 action_loss = -torch.min(surr1, surr2)
                 value_loss = F.smooth_l1_loss(value, reward)
                 loss += (action_loss + value_loss)
-            
+                
             self.optimizer.zero_grad()
             loss.backward(retain_graph=True)
             self.optimizer.step()
@@ -120,15 +123,16 @@ def main():
     #    lr = 0.01
     #    betas = (0.9, 0.999)
     #    eps_clip = 0.2
-    #    random_seed = 543
+    #    random_seed = 543 540
     
     render = False
-    lr = 0.02
+    log_interval = 10
+    lr = 0.0003
     betas = (0.9, 0.999)
     gamma = 0.99
-    K_epochs = 5 # update policy for K epochs
-    eps_clip = 0.2
-    random_seed = 543
+    K_epochs = 8 # update policy for K epochs
+    eps_clip = 0.2 # clip parameter for PPO
+    random_seed = 42
     torch.manual_seed(random_seed)
     
     env = gym.make('LunarLander-v2')
@@ -142,7 +146,7 @@ def main():
     for i_episode in range(1, 10000):
         state = env.reset()
         for t in range(10000):
-            # Run policy_old:
+            # Running policy_old:
             action = ppo.policy_old.act(state)
             state, reward, done, _ = env.step(action)
             
@@ -151,25 +155,25 @@ def main():
             ppo.policy_old.rewards.append(reward)
             
             running_reward += reward
-            if render and i_episode>1500:
+            if render:
                 env.render()
             if done:
                 break
         ppo.update()
         avg_length += t
         
-        if running_reward > 4000:
+        if running_reward > (log_interval*200):
             print("########## Solved! ##########")
             torch.save(ppo.policy.state_dict(), 
-                       './preTrained/LunarLander_{}_{}_{}.pth'.format(
+                       './LunarLander_{}_{}_{}.pth'.format(
                         lr, betas[0], betas[1]))
             break
         
-        if i_episode % 20 == 0:
-            avg_length = int(avg_length/20)
-            running_reward = int((running_reward/20))
-                
-            print('Episode {}\tlength: {}\treward: {}'.format(
+        if i_episode % log_interval == 0:
+            avg_length = int(avg_length/log_interval)
+            running_reward = int((running_reward/log_interval))
+            
+            print('Episode {} \t avg length: {} \t reward: {}'.format(
                     i_episode, avg_length, running_reward))
             running_reward = 0
             avg_length = 0
