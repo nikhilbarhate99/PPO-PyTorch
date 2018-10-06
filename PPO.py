@@ -19,26 +19,7 @@ class Model(nn.Module):
         self.state_values = []
         self.rewards = []
         
-    def forward(self, state):
-        raise NotImplementedError
-        
-    def act(self, state): 
-        state = torch.from_numpy(state).float()
-        state = self.affine(state)
-        
-        state_value = self.value_layer(state)
-        
-        action_probs = F.softmax(self.action_layer(state))
-        action_distribution = Categorical(action_probs)
-        action = action_distribution.sample()
-        
-        self.actions.append(action)
-        self.logprobs.append(action_distribution.log_prob(action))
-        self.state_values.append(state_value)
-        
-        return action.item()   
-    
-    def evaluate(self, state, action):
+    def forward(self, state, action=None, evaluate=False):
         state = torch.from_numpy(state).float()
         state = self.affine(state)
         
@@ -47,9 +28,15 @@ class Model(nn.Module):
         action_probs = F.softmax(self.action_layer(state))
         action_distribution = Categorical(action_probs)
         
+        if not evaluate:
+            action = action_distribution.sample()
+            self.actions.append(action)
+            
         self.logprobs.append(action_distribution.log_prob(action))
         self.state_values.append(state_value)
-         
+        
+        return action.item()
+        
     def clearMemory(self):
         del self.actions[:]
         del self.states[:]
@@ -87,13 +74,13 @@ class PPO:
             # Evaluating old actions and values :
             for state, action in zip(self.policy_old.states, 
                                      self.policy_old.actions):
-                self.policy.evaluate(state, action)
+                self.policy(state, action, evaluate=True)
             
             # Finding the ratio (pi_theta / pi_theta__old):
             ratios = []
             for logprob, logprob_old in zip(self.policy.logprobs, 
                                             self.policy_old.logprobs):
-                ratios.append(torch.exp(logprob - logprob_old))
+                ratios.append(torch.exp(logprob - logprob_old.item()))
             
             # Finding Surrogate Loss:
             loss = 0
@@ -108,7 +95,7 @@ class PPO:
                 loss += (action_loss + value_loss)
                 
             self.optimizer.zero_grad()
-            loss.backward(retain_graph=True)
+            loss.backward()
             self.optimizer.step()
             self.policy.clearMemory()
         
@@ -117,13 +104,13 @@ class PPO:
         # Copy new weights into old policy:
         self.policy_old.load_state_dict(self.policy.state_dict())
         
-def main():    
+def main():
     render = False
     log_interval = 10
-    lr = 0.0003
+    lr = 0.003
     betas = (0.9, 0.999)
     gamma = 0.99
-    K_epochs = 8 # update policy for K epochs
+    K_epochs = 5 # update policy for K epochs
     eps_clip = 0.2 # clip parameter for PPO
     random_seed = 42
     torch.manual_seed(random_seed)
@@ -140,7 +127,7 @@ def main():
         state = env.reset()
         for t in range(10000):
             # Running policy_old:
-            action = ppo.policy_old.act(state)
+            action = ppo.policy_old(state)
             state, reward, done, _ = env.step(action)
             
             # Saving state and reward:
@@ -173,5 +160,6 @@ def main():
             
 if __name__ == '__main__':
     main()
+    
     
     
