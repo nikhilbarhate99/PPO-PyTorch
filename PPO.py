@@ -117,14 +117,7 @@ class PPO:
         # Copy new weights into old policy:
         self.policy_old.load_state_dict(self.policy.state_dict())
         
-def main():
-    # Good parameters:
-    #    gamma = 0.99
-    #    lr = 0.01
-    #    betas = (0.9, 0.999)
-    #    eps_clip = 0.2
-    #    random_seed = 543 540
-    
+def main():    
     render = False
     log_interval = 10
     lr = 0.0003
