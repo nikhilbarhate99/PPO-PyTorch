@@ -20,6 +20,8 @@ class Model(nn.Module):
         self.rewards = []
         
     def forward(self, state, action=None, evaluate=False):
+        # if evaluate is True then we also need pass an action for evaluation
+        # else we return a new action from distribution
         state = torch.from_numpy(state).float()
         state = self.affine(state)
         
