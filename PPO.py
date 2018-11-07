@@ -5,12 +5,12 @@ from torch.distributions import Categorical
 import gym
 
 class Model(nn.Module):
-    def __init__(self):
+    def __init__(self, n_latent_var):
         super(Model, self).__init__()
-        self.affine = nn.Linear(8, 128)
+        self.affine = nn.Linear(8, n_latent_var)
         
-        self.action_layer = nn.Linear(128, 4)
-        self.value_layer = nn.Linear(128, 1)
+        self.action_layer = nn.Linear(n_latent_var, 4)
+        self.value_layer = nn.Linear(n_latent_var, 1)
         
         # Memory:
         self.actions = []
@@ -47,17 +47,17 @@ class Model(nn.Module):
         del self.rewards[:]
         
 class PPO:
-    def __init__(self, lr, betas, gamma, K_epochs, eps_clip):
+    def __init__(self, n_latent_var, lr, betas, gamma, K_epochs, eps_clip):
         self.lr = lr
         self.betas = betas
         self.gamma = gamma
         self.eps_clip = eps_clip
         self.K_epochs = K_epochs
         
-        self.policy = Model()
+        self.policy = Model(n_latent_var)
         self.optimizer = torch.optim.Adam(self.policy.parameters(),
                                               lr=lr, betas=betas)
-        self.policy_old = Model()
+        self.policy_old = Model(n_latent_var)
         
     def update(self):   
         # Monte Carlo estimate of state rewards:
@@ -95,7 +95,8 @@ class PPO:
                 action_loss = -torch.min(surr1, surr2)
                 value_loss = F.smooth_l1_loss(value, reward)
                 loss += (action_loss + value_loss)
-                
+            loss = loss.mean()
+            
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
@@ -107,20 +108,22 @@ class PPO:
         self.policy_old.load_state_dict(self.policy.state_dict())
         
 def main():
+    env = gym.make('LunarLander-v2')
     render = False
     log_interval = 10
-    lr = 0.003
+    n_latent_var = 128
+    lr = 0.0003
     betas = (0.9, 0.999)
     gamma = 0.99
     K_epochs = 5 # update policy for K epochs
     eps_clip = 0.2 # clip parameter for PPO
-    random_seed = 42
-    torch.manual_seed(random_seed)
     
-    env = gym.make('LunarLander-v2')
-    env.seed(random_seed)
-    
-    ppo = PPO(lr, betas, gamma, K_epochs, eps_clip)
+    random_seed = None
+    if random_seed is not None:
+        torch.manual_seed(random_seed)
+        env.seed(random_seed)
+        
+    ppo = PPO(n_latent_var, lr, betas, gamma, K_epochs, eps_clip)
     print(lr,betas)
     
     running_reward = 0
