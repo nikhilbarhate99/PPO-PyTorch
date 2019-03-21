@@ -104,7 +104,7 @@ class PPO:
             advantages = rewards - state_values.detach()
             surr1 = ratios * advantages
             surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip)
-            loss = -torch.min(surr1, surr2)
+            loss = -torch.min(surr1, surr2) + self.SmoothL1Loss(state_values, rewards)
             
             # take gradient step
             self.optimizer.zero_grad()
@@ -153,11 +153,13 @@ def main():
         for t in range(10000):
             # Running policy_old:
             action = ppo.policy_old(state)
-            state, reward, done, _ = env.step(action)
+            state_new, reward, done, _ = env.step(action)
             
             # Saving state and reward:
             ppo.policy_old.states.append(state)
             ppo.policy_old.rewards.append(reward)
+            
+            state = state_new
             
             running_reward += reward
             if render:
