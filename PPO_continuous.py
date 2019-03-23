@@ -4,8 +4,7 @@ from torch.distributions import MultivariateNormal
 import gym
 import numpy as np
 
-#device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-device = torch.device("cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class ActorCritic(nn.Module):
     def __init__(self, state_dim, action_dim, n_var, action_std=0.0):
@@ -60,7 +59,7 @@ class ActorCritic(nn.Module):
         dist_entropy = dist.entropy()
         state_value = self.critic(state)
         
-        return action_logprobs, state_value, dist_entropy.mean()
+        return action_logprobs, state_value, dist_entropy
     
     def clear_memory(self):
         del self.actions[:]
@@ -141,7 +140,6 @@ def main():
     env = gym.make(env_name)
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.shape[0]
-    #action_dim = 4
     
     solved_reward = 200
     
