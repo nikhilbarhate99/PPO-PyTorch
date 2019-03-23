@@ -13,8 +13,8 @@ class ActorCritic(nn.Module):
         # action range -1 to 1
         self.actor =  nn.Sequential(
                 nn.Linear(state_dim, n_var),
-#                nn.Tanh(),
-#                nn.Linear(n_var, n_var),
+                nn.Tanh(),
+                nn.Linear(n_var, n_var),
                 nn.Tanh(),
                 nn.Linear(n_var, action_dim),
                 nn.Sigmoid()
@@ -22,8 +22,8 @@ class ActorCritic(nn.Module):
         self.critic = nn.Sequential(
                 nn.Linear(state_dim, n_var),
                 nn.Tanh(),
-#                nn.Linear(n_var, n_var),
-#                nn.Tanh(),
+                nn.Linear(n_var, n_var),
+                nn.Tanh(),
                 nn.Linear(n_var, 1)
                 )
         self.action_var = torch.full((action_dim,), action_std*action_std).to(device)
