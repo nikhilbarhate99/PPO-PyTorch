@@ -5,6 +5,20 @@ import gym
 import numpy as np
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#device = torch.device("cpu")
+
+class Memory:
+    def __init__(self):
+        self.actions = []
+        self.states = []
+        self.logprobs = []
+        self.rewards = []
+    
+    def clear_memory(self):
+        del self.actions[:]
+        del self.states[:]
+        del self.logprobs[:]
+        del self.rewards[:]
 
 class ActorCritic(nn.Module):
     def __init__(self, state_dim, action_dim, n_var, action_std=0.0):
@@ -27,28 +41,18 @@ class ActorCritic(nn.Module):
                 )
         self.action_var = torch.full((action_dim,), action_std*action_std).to(device)
         
-        # Memory:
-        self.actions = []
-        self.states = []
-        self.logprobs = []
-        self.state_values = []
-        self.rewards = []
-        
     def forward(self):
         raise NotImplementedError
     
-    def act(self, state):
+    def act(self, state, memory):
         action_mean = self.actor(state)
         dist = MultivariateNormal(action_mean, torch.diag(self.action_var).to(device))
         action = dist.sample()
         action_logprob = dist.log_prob(action)
         
-        state_value = self.critic(state)
-        
-        self.states.append(state)
-        self.actions.append(action)
-        self.logprobs.append(action_logprob)
-        self.state_values.append(state_value)
+        memory.states.append(state)
+        memory.actions.append(action)
+        memory.logprobs.append(action_logprob)
         
         return action.detach()
     
@@ -61,12 +65,6 @@ class ActorCritic(nn.Module):
         
         return action_logprobs, state_value, dist_entropy
     
-    def clear_memory(self):
-        del self.actions[:]
-        del self.states[:]
-        del self.logprobs[:]
-        del self.state_values[:]
-        del self.rewards[:]
 
 class PPO:
     def __init__(self, state_dim, action_dim, n_latent_var, action_std, lr, betas, gamma, K_epochs, eps_clip):
@@ -83,15 +81,15 @@ class PPO:
         
         self.MseLoss = nn.MSELoss()
     
-    def select_action(self, state):
+    def select_action(self, state, memory):
         state = torch.FloatTensor(state.reshape(1, -1)).to(device)
-        return self.policy_old.act(state).cpu().data.numpy().flatten()
+        return self.policy_old.act(state, memory).cpu().data.numpy().flatten()
     
-    def update(self):   
+    def update(self, memory):
         # Monte Carlo estimate of state rewards:
         rewards = []
         discounted_reward = 0
-        for reward in reversed(self.policy_old.rewards):
+        for reward in reversed(memory.rewards):
             discounted_reward = reward + (self.gamma * discounted_reward)
             rewards.insert(0, discounted_reward)
         
@@ -100,10 +98,9 @@ class PPO:
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-5)
         
         # convert list in tensor
-        
-        old_states = torch.stack(self.policy_old.states).to(device).detach()
-        old_actions = torch.stack(self.policy_old.actions).to(device).detach()
-        old_logprobs = torch.stack(self.policy_old.logprobs).to(device).detach()
+        old_states = torch.stack(memory.states).to(device).detach()
+        old_actions = torch.stack(memory.actions).to(device).detach()
+        old_logprobs = torch.stack(memory.logprobs).to(device).detach()
         
         # Optimize policy for K epochs:
         for _ in range(self.K_epochs):
@@ -124,9 +121,6 @@ class PPO:
             loss.mean().backward()
             self.optimizer.step()
             
-            self.policy.clear_memory()
-        
-        self.policy_old.clear_memory()
         
         # Copy new weights into old policy:
         self.policy_old.load_state_dict(self.policy.state_dict())
@@ -135,21 +129,14 @@ def main():
     ############## Hyperparameters ##############
     #env_name = "BipedalWalker-v2"
     env_name = "LunarLanderContinuous-v2"
-    
-    # creating environment
-    env = gym.make(env_name)
-    state_dim = env.observation_space.shape[0]
-    action_dim = env.action_space.shape[0]
-    
-    solved_reward = 200
-    
+    solved_reward = 200         # stop training if avg_reward > solved_reward    
     max_ep = 10000
     max_timesteps = 1000
     render = False
-    log_interval = 50
+    log_interval = 50           # print avg reward after n episodes
     n_latent_var = 64           # number of variables in hidden layer
-    n_update = 10               # update policy every n episodes
-    action_std = 0.1
+    n_update = 5                # update policy every n episodes
+    action_std = 0.1            # constant std for action distribution
     lr = 0.0007
     betas = (0.9, 0.999)
     gamma = 0.99                # discount factor
@@ -158,12 +145,18 @@ def main():
     random_seed = None
     #############################################
     
+    # creating environment
+    env = gym.make(env_name)
+    state_dim = env.observation_space.shape[0]
+    action_dim = env.action_space.shape[0]
+    
     if random_seed:
         print("Random Seed: {}".format(random_seed))
         torch.manual_seed(random_seed)
         env.seed(random_seed)
         np.random.seed(random_seed)
-        
+    
+    memory = Memory()
     ppo = PPO(state_dim, action_dim, n_latent_var, action_std, lr, betas, gamma, K_epochs, eps_clip)
     print(lr,betas)
     
@@ -173,11 +166,11 @@ def main():
         state = env.reset()
         for t in range(max_timesteps):
             # Running policy_old:
-            action = ppo.select_action(state)
+            action = ppo.select_action(state, memory)
             state, reward, done, _ = env.step(action)
             
             # Saving reward:
-            ppo.policy_old.rewards.append(reward)
+            memory.rewards.append(reward)
             
             running_reward += reward
             if render:
@@ -189,14 +182,14 @@ def main():
         
         # update after n episodes
         if i_episode % n_update:
-            ppo.update()
+            ppo.update(memory)
+            memory.clear_memory()
         
         # log
         if running_reward > (log_interval*solved_reward):
             print("########## Solved! ##########")
-            torch.save(ppo.policy.state_dict(), 
-                       './LunarLander_{}_{}_{}.pth'.format(
-                        lr, betas[0], betas[1]))
+            torch.save(ppo.policy.state_dict(), './LunarLander_{}_{}_{}.pth'.format(
+                                                lr, betas[0], betas[1]))
             break
         
         if i_episode % log_interval == 0:
@@ -213,5 +206,5 @@ if __name__ == '__main__':
     
     
     
-    
+   
     
