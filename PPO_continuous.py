@@ -29,7 +29,7 @@ class ActorCritic(nn.Module):
                 nn.Linear(n_var, n_var),
                 nn.Tanh(),
                 nn.Linear(n_var, action_dim),
-                nn.Sigmoid()
+                nn.Tanh()
                 )
         self.critic = nn.Sequential(
                 nn.Linear(state_dim, n_var),
@@ -125,7 +125,6 @@ class PPO:
         
 def main():
     ############## Hyperparameters ##############
-    #env_name = "BipedalWalker-v2"
     env_name = "LunarLanderContinuous-v2"
     solved_reward = 200         # stop training if avg_reward > solved_reward    
     max_ep = 10000
