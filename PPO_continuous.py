@@ -5,7 +5,6 @@ import gym
 import numpy as np
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-#device = torch.device("cpu")
 
 class Memory:
     def __init__(self):
@@ -121,7 +120,6 @@ class PPO:
             loss.mean().backward()
             self.optimizer.step()
             
-        
         # Copy new weights into old policy:
         self.policy_old.load_state_dict(self.policy.state_dict())
         
@@ -207,4 +205,6 @@ if __name__ == '__main__':
     
     
    
+    
+
     
