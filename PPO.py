@@ -62,7 +62,7 @@ class ActorCritic(nn.Module):
         dist = Categorical(action_probs)
         action_logprobs = dist.log_prob(action)
         dist_entropy = dist.entropy()
-        state_value = self.critic(state)
+        state_value = self.value_layer(state)
         
         return action_logprobs, state_value, dist_entropy
         
@@ -93,9 +93,9 @@ class PPO:
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-5)
         
         # convert list in tensor
-        old_states = torch.tensor(memory.states).to(device).detach()
-        old_actions = torch.tensor(memory.actions).to(device).detach()
-        old_logprobs = torch.tensor(memory.logprobs).to(device).detach()
+        old_states = torch.stack(memory.states).to(device).detach()
+        old_actions = torch.stack(memory.actions).to(device).detach()
+        old_logprobs = torch.stack(memory.logprobs).to(device).detach()
         
         # Optimize policy for K epochs:
         for _ in range(self.K_epochs):
