@@ -20,7 +20,7 @@ class Memory:
         del self.rewards[:]
 
 class ActorCritic(nn.Module):
-    def __init__(self, state_dim, action_dim, n_var, action_std=0.0):
+    def __init__(self, state_dim, action_dim, n_var, action_std):
         super(ActorCritic, self).__init__()
         # action range -1 to 1
         self.actor =  nn.Sequential(
@@ -132,7 +132,7 @@ def main():
     render = False
     log_interval = 50           # print avg reward after n episodes
     n_latent_var = 64           # number of variables in hidden layer
-    n_update = 5                # update policy every n episodes
+    n_update = 5000             # update policy every n timesteps
     action_std = 0.1            # constant std for action distribution
     lr = 0.0007
     betas = (0.9, 0.999)
@@ -159,9 +159,11 @@ def main():
     
     running_reward = 0
     avg_length = 0
+    time_step = 0
     for i_episode in range(1, max_ep+1):
         state = env.reset()
         for t in range(max_timesteps):
+            time_step +=1
             # Running policy_old:
             action = ppo.select_action(state, memory)
             state, reward, done, _ = env.step(action)
@@ -178,9 +180,10 @@ def main():
         avg_length += t
         
         # update after n episodes
-        if i_episode % n_update:
+        if time_step % n_update == 0:
             ppo.update(memory)
             memory.clear_memory()
+            time_step = 0
         
         # log
         if running_reward > (log_interval*solved_reward):
@@ -203,7 +206,5 @@ if __name__ == '__main__':
     
     
     
-   
     
-
     
