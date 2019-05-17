@@ -128,11 +128,11 @@ def main():
     env_name = "LunarLanderContinuous-v2"
     solved_reward = 200         # stop training if avg_reward > solved_reward    
     max_ep = 10000
-    max_timesteps = 1000
+    max_timesteps = 500
     render = False
     log_interval = 50           # print avg reward after n episodes
     n_latent_var = 64           # number of variables in hidden layer
-    n_update = 5000             # update policy every n timesteps
+    n_update = 10000             # update policy every n timesteps
     action_std = 0.1            # constant std for action distribution
     lr = 0.0007
     betas = (0.9, 0.999)
@@ -171,6 +171,13 @@ def main():
             # Saving reward:
             memory.rewards.append(reward)
             
+            # update if its time
+            if time_step % n_update == 0:
+                print("Updteing")
+                ppo.update(memory)
+                memory.clear_memory()
+                time_step = 0
+            
             running_reward += reward
             if render:
                 env.render()
@@ -178,12 +185,6 @@ def main():
                 break
         
         avg_length += t
-        
-        # update after n episodes
-        if time_step % n_update == 0:
-            ppo.update(memory)
-            memory.clear_memory()
-            time_step = 0
         
         # log
         if running_reward > (log_interval*solved_reward):
@@ -203,8 +204,6 @@ def main():
             
 if __name__ == '__main__':
     main()
-    
-    
     
     
     
