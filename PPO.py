@@ -31,7 +31,7 @@ class ActorCritic(nn.Module):
                 nn.Linear(n_latent_var, n_latent_var),
                 nn.Tanh(),
                 nn.Linear(n_latent_var, action_dim),
-                nn.Softmax()
+                nn.Softmax(dim=-1)
                 )
         
         # critic
@@ -42,7 +42,7 @@ class ActorCritic(nn.Module):
                 nn.Tanh(),
                 nn.Linear(n_latent_var, 1)
                 )
-    
+        
     def forward(self):
         raise NotImplementedError
         
@@ -128,14 +128,14 @@ def main():
     env = gym.make(env_name)
     state_dim = env.observation_space.shape[0]
     action_dim = 4
-    solved_reward = 200        # stop training if avg_reward > solved_reward
     render = False
-    log_interval = 20
-    max_episodes = 50000
-    max_timesteps = 500
+    solved_reward = 230         # stop training if avg_reward > solved_reward
+    log_interval = 20           # print avg reward in the interval
+    max_episodes = 50000        # max training episodes
+    max_timesteps = 300         # max timesteps in one episode
     n_latent_var = 64           # number of variables in hidden layer
-    update_timestep = 2000       # update policy every n timesteps
-    lr = 0.0007
+    update_timestep = 2000      # update policy every n timesteps
+    lr = 0.002
     betas = (0.9, 0.999)
     gamma = 0.99                # discount factor
     K_epochs = 4                # update policy for K epochs
@@ -197,3 +197,4 @@ def main():
             
 if __name__ == '__main__':
     main()
+    
