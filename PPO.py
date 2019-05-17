@@ -22,6 +22,7 @@ class Memory:
 class ActorCritic(nn.Module):
     def __init__(self, state_dim, action_dim, n_latent_var):
         super(ActorCritic, self).__init__()
+        self.affine = nn.Linear(state_dim, n_latent_var)
         
         # actor
         self.action_layer = nn.Sequential(
@@ -41,7 +42,7 @@ class ActorCritic(nn.Module):
                 nn.Tanh(),
                 nn.Linear(n_latent_var, 1)
                 )
-        
+    
     def forward(self):
         raise NotImplementedError
         
@@ -64,7 +65,7 @@ class ActorCritic(nn.Module):
         dist_entropy = dist.entropy()
         state_value = self.value_layer(state)
         
-        return action_logprobs, state_value, dist_entropy
+        return action_logprobs, torch.squeeze(state_value), dist_entropy
         
 class PPO:
     def __init__(self, state_dim, action_dim, n_latent_var, lr, betas, gamma, K_epochs, eps_clip):
@@ -75,7 +76,8 @@ class PPO:
         self.K_epochs = K_epochs
         
         self.policy = ActorCritic(state_dim, action_dim, n_latent_var).to(device)
-        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=lr, betas=betas)
+        self.optimizer = torch.optim.Adam(self.policy.parameters(),
+                                              lr=lr, betas=betas)
         self.policy_old = ActorCritic(state_dim, action_dim, n_latent_var).to(device)
         
         self.MseLoss = nn.MSELoss()
@@ -126,15 +128,18 @@ def main():
     env = gym.make(env_name)
     state_dim = env.observation_space.shape[0]
     action_dim = 4
+    solved_reward = 200        # stop training if avg_reward > solved_reward
     render = False
     log_interval = 20
-    n_latent_var = 64               # number of variables in hidden layer
-    update_timestep = 5000          # update policy every n timesteps
+    max_episodes = 50000
+    max_timesteps = 500
+    n_latent_var = 64           # number of variables in hidden layer
+    update_timestep = 2000       # update policy every n timesteps
     lr = 0.0007
     betas = (0.9, 0.999)
-    gamma = 0.99                    # discount factor
-    K_epochs = 10                   # update policy for K epochs
-    eps_clip = 0.2                  # clip parameter for PPO
+    gamma = 0.99                # discount factor
+    K_epochs = 4                # update policy for K epochs
+    eps_clip = 0.2              # clip parameter for PPO
     random_seed = None
     #############################################
     
@@ -149,9 +154,9 @@ def main():
     running_reward = 0
     avg_length = 0
     timestep = 0
-    for i_episode in range(1, 10000):
+    for i_episode in range(1, max_episodes+1):
         state = env.reset()
-        for t in range(10000):
+        for t in range(max_timesteps):
             timestep += 1
             
             # Running policy_old:
@@ -175,25 +180,20 @@ def main():
         avg_length += t
         
         # log
-        if running_reward > (log_interval*200):
+        if running_reward > (log_interval*solved_reward):
             print("########## Solved! ##########")
-            torch.save(ppo.policy.state_dict(), './LunarLander_{}_{}_{}.pth'.format(lr, betas[0], betas[1]))
+            torch.save(ppo.policy.state_dict(), 
+                       './PPO_{}.pth'.format(env_name))
             break
         
         if i_episode % log_interval == 0:
             avg_length = int(avg_length/log_interval)
             running_reward = int((running_reward/log_interval))
             
-            print('Episode {} \t avg length: {} \t reward: {}'.format(i_episode, avg_length, running_reward))
+            print('Episode {} \t avg length: {} \t reward: {}'.format(
+                    i_episode, avg_length, running_reward))
             running_reward = 0
             avg_length = 0
             
 if __name__ == '__main__':
     main()
-    
-    
-    
-    
-    
-    
-    
