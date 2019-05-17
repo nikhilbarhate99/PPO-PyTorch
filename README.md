@@ -1,5 +1,5 @@
 # PPO-PyTorch
-Simple and beginner friendly PyTorch implementation of [Proximal Policy Optimization](https://arxiv.org/abs/1707.06347) for OpenAI gym environment.
+Simple and beginner friendly PyTorch implementation of [Proximal Policy Optimization](https://arxiv.org/abs/1707.06347) with clipped objective for OpenAI gym environment.
 
 - To test a preTrained network : run `test.py`
 
