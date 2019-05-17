@@ -1,4 +1,4 @@
-# PPO
+# PPO-PyTorch
 Simple and beginner friendly PyTorch implementation of [Proximal Policy Optimization](https://arxiv.org/abs/1707.06347) for OpenAI gym environment.
 
 - To test a preTrained network : run `test.py`
@@ -18,8 +18,3 @@ Pillow 5.3.0
 PPO Discrete LunarLander-v2 (1200 episodes)
 
 ![](https://github.com/nikhilbarhate99/PPO-PyTorch/blob/master/gif/PPO_LunarLander-v2.gif) 
-
-
-## References
-
-- Official [PPO paper](https://arxiv.org/abs/1707.06347)
