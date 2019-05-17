@@ -127,12 +127,12 @@ def main():
     ############## Hyperparameters ##############
     env_name = "LunarLanderContinuous-v2"
     solved_reward = 200         # stop training if avg_reward > solved_reward    
-    max_ep = 10000
+    max_ep = 50000
     max_timesteps = 500
     render = False
-    log_interval = 50           # print avg reward after n episodes
+    log_interval = 20           # print avg reward after n episodes
     n_latent_var = 64           # number of variables in hidden layer
-    n_update = 10000             # update policy every n timesteps
+    n_update = 500             # update policy every n timesteps
     action_std = 0.1            # constant std for action distribution
     lr = 0.0007
     betas = (0.9, 0.999)
@@ -173,7 +173,6 @@ def main():
             
             # update if its time
             if time_step % n_update == 0:
-                print("Updteing")
                 ppo.update(memory)
                 memory.clear_memory()
                 time_step = 0
