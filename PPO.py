@@ -18,7 +18,6 @@ class Memory:
         del self.logprobs[:]
         del self.rewards[:]
 
-
 class ActorCritic(nn.Module):
     def __init__(self, state_dim, action_dim, n_latent_var):
         super(ActorCritic, self).__init__()
@@ -61,8 +60,10 @@ class ActorCritic(nn.Module):
     def evaluate(self, state, action):
         action_probs = self.action_layer(state)
         dist = Categorical(action_probs)
+        
         action_logprobs = dist.log_prob(action)
         dist_entropy = dist.entropy()
+        
         state_value = self.value_layer(state)
         
         return action_logprobs, torch.squeeze(state_value), dist_entropy
@@ -94,7 +95,7 @@ class PPO:
         rewards = torch.tensor(rewards).to(device)
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-5)
         
-        # convert list in tensor
+        # convert list to tensor
         old_states = torch.stack(memory.states).to(device).detach()
         old_actions = torch.stack(memory.actions).to(device).detach()
         old_logprobs = torch.stack(memory.logprobs).to(device).detach()
@@ -151,9 +152,12 @@ def main():
     ppo = PPO(state_dim, action_dim, n_latent_var, lr, betas, gamma, K_epochs, eps_clip)
     print(lr,betas)
     
+    # logging variables
     running_reward = 0
     avg_length = 0
     timestep = 0
+    
+    # training loop
     for i_episode in range(1, max_episodes+1):
         state = env.reset()
         for t in range(max_timesteps):
@@ -162,10 +166,10 @@ def main():
             # Running policy_old:
             action = ppo.policy_old.act(state, memory)
             state, reward, done, _ = env.step(action)
-            
             # Saving reward:
             memory.rewards.append(reward)
             
+            # update if its time
             if timestep % update_timestep == 0:
                 ppo.update(memory)
                 memory.clear_memory()
@@ -176,22 +180,21 @@ def main():
                 env.render()
             if done:
                 break
-        
+                
         avg_length += t
         
-        # log
+        # stop training if avg_reward > solved_reward
         if running_reward > (log_interval*solved_reward):
             print("########## Solved! ##########")
-            torch.save(ppo.policy.state_dict(), 
-                       './PPO_{}.pth'.format(env_name))
+            torch.save(ppo.policy.state_dict(), './PPO_{}.pth'.format(env_name))
             break
-        
+            
+        # logging
         if i_episode % log_interval == 0:
             avg_length = int(avg_length/log_interval)
             running_reward = int((running_reward/log_interval))
             
-            print('Episode {} \t avg length: {} \t reward: {}'.format(
-                    i_episode, avg_length, running_reward))
+            print('Episode {} \t avg length: {} \t reward: {}'.format(i_episode, avg_length, running_reward))
             running_reward = 0
             avg_length = 0
             
