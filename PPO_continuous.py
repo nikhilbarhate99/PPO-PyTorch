@@ -46,7 +46,9 @@ class ActorCritic(nn.Module):
     
     def act(self, state, memory):
         action_mean = self.actor(state)
-        dist = MultivariateNormal(action_mean, torch.diag(self.action_var).to(device))
+        cov_mat = torch.diag(self.action_var).to(device)
+        
+        dist = MultivariateNormal(action_mean, cov_mat)
         action = dist.sample()
         action_logprob = dist.log_prob(action)
         
@@ -56,9 +58,13 @@ class ActorCritic(nn.Module):
         
         return action.detach()
     
-    def evaluate(self, state, action):
-        action_mean = self.actor(state)
-        dist = MultivariateNormal(torch.squeeze(action_mean), torch.diag(self.action_var))
+    def evaluate(self, state, action):   
+        action_mean = torch.squeeze(self.actor(state))
+        
+        action_var = self.action_var.expand_as(action_mean)
+        cov_mat = torch.diag_embed(action_var).to(device)
+        
+        dist = MultivariateNormal(action_mean, cov_mat)
         
         action_logprobs = dist.log_prob(torch.squeeze(action))
         dist_entropy = dist.entropy()
@@ -98,20 +104,20 @@ class PPO:
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-5)
         
         # convert list to tensor
-        old_states = torch.stack(memory.states).to(device).detach()
-        old_actions = torch.stack(memory.actions).to(device).detach()
+        old_states = torch.squeeze(torch.stack(memory.states).to(device)).detach()
+        old_actions = torch.squeeze(torch.stack(memory.actions).to(device)).detach()
         old_logprobs = torch.squeeze(torch.stack(memory.logprobs)).to(device).detach()
         
         # Optimize policy for K epochs:
         for _ in range(self.K_epochs):
             # Evaluating old actions and values :
             logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions)
-     
+            
             # Finding the ratio (pi_theta / pi_theta__old):
             ratios = torch.exp(logprobs - old_logprobs.detach())
 
             # Finding Surrogate Loss:
-            advantages = rewards - state_values.detach()
+            advantages = rewards - state_values.detach()   
             surr1 = ratios * advantages
             surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
             loss = -torch.min(surr1, surr2) + 0.5*self.MseLoss(state_values, rewards) - 0.01*dist_entropy
@@ -130,16 +136,19 @@ def main():
     render = False
     solved_reward = 200         # stop training if avg_reward > solved_reward
     log_interval = 20           # print avg reward in the interval
-    max_episodes = 50000        # max training episodes
-    max_timesteps = 300         # max timesteps in one episode
-    n_latent_var = 64           # number of variables in hidden layer
+    max_episodes = 10000        # max training episodes
+    max_timesteps = 500         # max timesteps in one episode
+    
     update_timestep = 4000      # update policy every n timesteps
-    action_std = 0.6            # constant std for action distribution
-    lr = 0.0025
-    betas = (0.9, 0.999)
-    gamma = 0.99                # discount factor
-    K_epochs = 5                # update policy for K epochs
+    action_std = 0.8            # constant std for action distribution (Multivariate Normal)
+    K_epochs = 100              # update policy for K epochs
     eps_clip = 0.2              # clip parameter for PPO
+    gamma = 0.99                # discount factor
+    
+    n_latent_var = 64           # number of variables in hidden layer
+    lr = 0.00025                # parameters for Adam optimizer
+    betas = (0.9, 0.999)
+    
     random_seed = None
     #############################################
     
@@ -203,4 +212,9 @@ def main():
             
 if __name__ == '__main__':
     main()
+    
+    
+    
+    
+    
     
