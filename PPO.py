@@ -11,12 +11,14 @@ class Memory:
         self.states = []
         self.logprobs = []
         self.rewards = []
+        self.is_terminals = []
     
     def clear_memory(self):
         del self.actions[:]
         del self.states[:]
         del self.logprobs[:]
         del self.rewards[:]
+        del self.is_terminals[:]
 
 class ActorCritic(nn.Module):
     def __init__(self, state_dim, action_dim, n_latent_var):
@@ -87,9 +89,11 @@ class PPO:
         # Monte Carlo estimate of state rewards:
         rewards = []
         discounted_reward = 0
-        for reward in reversed(memory.rewards):
+        for reward, is_terminal in zip(reversed(memory.rewards), reversed(memory.is_terminals)):
             discounted_reward = reward + (self.gamma * discounted_reward)
             rewards.insert(0, discounted_reward)
+            if is_terminal:
+                discounted_reward = 0
         
         # Normalizing the rewards:
         rewards = torch.tensor(rewards).to(device)
@@ -166,8 +170,10 @@ def main():
             # Running policy_old:
             action = ppo.policy_old.act(state, memory)
             state, reward, done, _ = env.step(action)
-            # Saving reward:
+            
+            # Saving reward and is_terminal:
             memory.rewards.append(reward)
+            memory.is_terminals.append(done)
             
             # update if its time
             if timestep % update_timestep == 0:
