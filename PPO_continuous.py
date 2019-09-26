@@ -84,7 +84,9 @@ class PPO:
         
         self.policy = ActorCritic(state_dim, action_dim, action_std).to(device)
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=lr, betas=betas)
+        
         self.policy_old = ActorCritic(state_dim, action_dim, action_std).to(device)
+        self.policy_old.load_state_dict(self.policy.state_dict())
         
         self.MseLoss = nn.MSELoss()
     
