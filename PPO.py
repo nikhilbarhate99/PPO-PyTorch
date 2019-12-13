@@ -23,8 +23,7 @@ class Memory:
 class ActorCritic(nn.Module):
     def __init__(self, state_dim, action_dim, n_latent_var):
         super(ActorCritic, self).__init__()
-        self.affine = nn.Linear(state_dim, n_latent_var)
-        
+
         # actor
         self.action_layer = nn.Sequential(
                 nn.Linear(state_dim, n_latent_var),
