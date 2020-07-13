@@ -7,7 +7,7 @@ Minimal PyTorch implementation of Proximal Policy Optimization with clipped obje
 - To train a new network : run `PPO.py` or `PPO_continuous.py`
 - All the hyperparameters are in the `PPO.py` or `PPO_continuous.py` file
 - If you are trying to train it on a environment where action dimension = 1, make sure to check the tensor dimensions in the update function of PPO class, since I have used `torch.squeeze()` quite a few times. `torch.squeeze()` squeezes the tensor such that there are no dimensions of length = 1 ([more info](https://pytorch.org/docs/stable/torch.html?highlight=torch%20squeeze#torch.squeeze)).
-- Number of actors for collecting experience = 1. This could be easily changed by creating multiple instances of ActorCritic networks in the PPO class and using them to collect experience (like A3C and standard PPO).
+- Number of actors for collecting experience = 1. This could be changed by creating multiple instances of ActorCritic networks in the PPO class and using them to collect experience (like A3C and standard PPO).
 
 ## Dependencies
 Trained and tested on:
