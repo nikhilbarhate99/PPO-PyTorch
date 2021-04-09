@@ -2,13 +2,13 @@
 
 ### UPDATE [9th April 2021] : 
 
-- merged continuous and discrete algorithms
-- linear decaying for the continuous action space action_std to make training more stable for complex environments
+- merged discrete and continuous algorithms
+- linear decaying for the continuous action space `action_std`; to make training more stable for complex environments
 - added different learning rates for actor and critic
-- episodes, timesteps and rewards are logged in .csv files
+- episodes, timesteps and rewards are logged in `.csv` files
 - utils to plot graphs from log files
 - utils to test and make gifs from preTrained networks
-- jupyter notebook (PPO_colab.ipynb) combining all the files to train/test/plot graph/make gif/ on google colab
+- jupyter notebook (`PPO_colab.ipynb`) combining all the files to train / test / plot graphs / make gifs on google colab
 
 #### [Open in Google Colab](https://colab.research.google.com/github/nikhilbarhate99/PPO-PyTorch/blob/master/PPO_colab.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nikhilbarhate99/PPO-PyTorch/blob/master/PPO_colab.ipynb)
 
@@ -19,9 +19,9 @@ This repository provides a Minimal PyTorch implementation of Proximal Policy Opt
 but may require some hyperparameter-tuning or changes in the code.
 
 To keep the training procedure simple : 
-  - I have kept a constant standard deviation for the output action distribution (multivariate normal with diagonal covariance matrix) for the continuous environments, i.e. it is a hyperparameter and NOT a trainable parameter. However, it is linearly decayed. (action_std significantly affects performance)
-  - I have used simple monte-carlo estimate for calculating returns and NOT Generalized Advantage Estimate (you can check out the OpenAI spinning up implementation for that or try implementing it yourself).
-  - It is a single threaded implementation, i.e. only one worker collects experience [one of the forks [Link] of this repository has been modified to have Parallel workers]
+  - I have kept a **constant standard deviation** for the output action distribution (**multivariate normal with diagonal covariance matrix**) for the continuous environments, i.e. it is a hyperparameter and NOT a trainable parameter. However, it is **linearly decayed**. (action_std significantly affects performance)
+  - I have used simple **monte-carlo estimate** for calculating returns and NOT Generalized Advantage Estimate (you can check out the OpenAI spinning up implementation for that or try implementing it yourself).
+  - It is a single threaded implementation, i.e. only one worker collects experience. [One of the older forks](https://github.com/rhklite/Parallel-PPO-PyTorch) of this repository has been modified to have Parallel workers
 
 A concise explaination of PPO algorithm can be found [here](https://stackoverflow.com/questions/46422845/what-is-the-way-to-understand-proximal-policy-optimization-algorithm-in-rl)
 
