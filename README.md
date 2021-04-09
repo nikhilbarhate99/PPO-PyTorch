@@ -37,7 +37,18 @@ A concise explaination of PPO algorithm can be found [here](https://stackoverflo
 
 #### [Open in Google Colab](https://colab.research.google.com/github/nikhilbarhate99/PPO-PyTorch/blob/master/PPO_colab.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nikhilbarhate99/PPO-PyTorch/blob/master/PPO_colab.ipynb)
 
+## Citing 
 
+Please use this bibtex if you want to cite this repository in your publications :
+
+    @misc{pytorch_minimal_ppo,
+        author = {Barhate, Nikhil},
+        title = {Minimal PyTorch Implementation of Proximal Policy Optimization},
+        year = {2021},
+        publisher = {GitHub},
+        journal = {GitHub repository},
+        howpublished = {\url{https://github.com/nikhilbarhate99/PPO-PyTorch}},
+    }
 
 ## Results
 
