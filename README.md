@@ -3,8 +3,7 @@
 ### UPDATE [9th April 2021] : 
 
 - merged continuous and discrete algorithms
-- linear decaying for the continuous action space  
-  action_std to make training more stable for complex environments
+- linear decaying for the continuous action space action_std to make training more stable for complex environments
 - added different learning rates for actor and critic
 - episodes, timesteps and rewards are logged in .csv files
 - utils to plot graphs from log files
@@ -19,13 +18,12 @@
 This repository provides a Minimal PyTorch implementation of Proximal Policy Optimization with clipped objective for OpenAI gym environments. It is primarily intended for beginners in RL for understanding the PPO algorithm. It can still be used for complex environments 
 but may require some hyperparameter-tuning or changes in the code.
 
-A concise explaination of PPO algorithm can be found [here](https://stackoverflow.com/questions/46422845/what-is-the-way-to-understand-proximal-policy-optimization-algorithm-in-rl)
-
 To keep the training procedure simple : 
-  - I have kept a constant standard deviation for the output action distribution (multivariate normal with diagonal covariance matrix) for the continuous environments, i.e. it is a hyperparameter and NOT a trainable parameter. However, it is linearly decayed.(action_std significantly affects performance)
+  - I have kept a constant standard deviation for the output action distribution (multivariate normal with diagonal covariance matrix) for the continuous environments, i.e. it is a hyperparameter and NOT a trainable parameter. However, it is linearly decayed. (action_std significantly affects performance)
   - I have used simple monte-carlo estimate for calculating returns and NOT Generalized Advantage Estimate (you can check out the OpenAI spinning up implementation for that or try implementing it yourself).
   - It is a single threaded implementation, i.e. only one worker collects experience [one of the forks [Link] of this repository has been modified to have Parallel workers]
 
+A concise explaination of PPO algorithm can be found [here](https://stackoverflow.com/questions/46422845/what-is-the-way-to-understand-proximal-policy-optimization-algorithm-in-rl)
 
 
 ## Usage
