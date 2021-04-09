@@ -1,11 +1,34 @@
 import torch
 import torch.nn as nn
+from torch.distributions import MultivariateNormal
 from torch.distributions import Categorical
-import gym
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-class Memory:
+
+################################## set device ##################################
+
+print("============================================================================================")
+
+
+# set device to cpu or cuda
+device = torch.device('cpu')
+
+if(torch.cuda.is_available()): 
+    device = torch.device('cuda:0') 
+    torch.cuda.empty_cache()
+    print("Device set to : " + str(torch.cuda.get_device_name(device)))
+else:
+    print("Device set to : cpu")
+    
+print("============================================================================================")
+
+
+
+
+################################## PPO Policy ##################################
+
+
+class RolloutBuffer:
     def __init__(self):
         self.actions = []
         self.states = []
@@ -13,196 +36,248 @@ class Memory:
         self.rewards = []
         self.is_terminals = []
     
-    def clear_memory(self):
+
+    def clear(self):
         del self.actions[:]
         del self.states[:]
         del self.logprobs[:]
         del self.rewards[:]
         del self.is_terminals[:]
 
+
 class ActorCritic(nn.Module):
-    def __init__(self, state_dim, action_dim, n_latent_var):
+    def __init__(self, state_dim, action_dim, has_continuous_action_space, action_std_init):
         super(ActorCritic, self).__init__()
 
+        self.has_continuous_action_space = has_continuous_action_space
+
+        if has_continuous_action_space:
+            self.action_dim = action_dim
+            self.action_var = torch.full((action_dim,), action_std_init * action_std_init).to(device)
+
         # actor
-        self.action_layer = nn.Sequential(
-                nn.Linear(state_dim, n_latent_var),
-                nn.Tanh(),
-                nn.Linear(n_latent_var, n_latent_var),
-                nn.Tanh(),
-                nn.Linear(n_latent_var, action_dim),
-                nn.Softmax(dim=-1)
-                )
+        if has_continuous_action_space :
+            self.actor = nn.Sequential(
+                            nn.Linear(state_dim, 64),
+                            nn.Tanh(),
+                            nn.Linear(64, 64),
+                            nn.Tanh(),
+                            nn.Linear(64, action_dim),
+                            nn.Tanh()
+                        )
+        else:
+            self.actor = nn.Sequential(
+                            nn.Linear(state_dim, 64),
+                            nn.Tanh(),
+                            nn.Linear(64, 64),
+                            nn.Tanh(),
+                            nn.Linear(64, action_dim),
+                            nn.Softmax(dim=-1)
+                        )
+
         
         # critic
-        self.value_layer = nn.Sequential(
-                nn.Linear(state_dim, n_latent_var),
-                nn.Tanh(),
-                nn.Linear(n_latent_var, n_latent_var),
-                nn.Tanh(),
-                nn.Linear(n_latent_var, 1)
-                )
+        self.critic = nn.Sequential(
+                        nn.Linear(state_dim, 64),
+                        nn.Tanh(),
+                        nn.Linear(64, 64),
+                        nn.Tanh(),
+                        nn.Linear(64, 1)
+                    )
         
+    def set_action_std(self, new_action_std):
+
+        if self.has_continuous_action_space:
+            self.action_var = torch.full((self.action_dim,), new_action_std * new_action_std).to(device)
+        else:
+            print("--------------------------------------------------------------------------------------------")
+            print("WARNING : Calling ActorCritic::set_action_std() on discrete action space policy")
+            print("--------------------------------------------------------------------------------------------")
+
+
     def forward(self):
         raise NotImplementedError
-        
-    def act(self, state, memory):
-        state = torch.from_numpy(state).float().to(device) 
-        action_probs = self.action_layer(state)
-        dist = Categorical(action_probs)
-        action = dist.sample()
-        
-        memory.states.append(state)
-        memory.actions.append(action)
-        memory.logprobs.append(dist.log_prob(action))
-        
-        return action.item()
     
-    def evaluate(self, state, action):
-        action_probs = self.action_layer(state)
-        dist = Categorical(action_probs)
+
+    def act(self, state):
+
+        if self.has_continuous_action_space:
+            action_mean = self.actor(state)
+            cov_mat = torch.diag(self.action_var).unsqueeze(dim=0)
+            dist = MultivariateNormal(action_mean, cov_mat)
+        else:
+            action_probs = self.actor(state)
+            dist = Categorical(action_probs)
+
+        action = dist.sample()
+        action_logprob = dist.log_prob(action)
         
+        return action.detach(), action_logprob.detach()
+    
+
+    def evaluate(self, state, action):
+
+        if self.has_continuous_action_space:
+            action_mean = self.actor(state)
+            action_var = self.action_var.expand_as(action_mean)
+            cov_mat = torch.diag_embed(action_var).to(device)
+            dist = MultivariateNormal(action_mean, cov_mat)
+        else:
+            action_probs = self.actor(state)
+            dist = Categorical(action_probs)
+
         action_logprobs = dist.log_prob(action)
         dist_entropy = dist.entropy()
+        state_values = self.critic(state)
         
-        state_value = self.value_layer(state)
-        
-        return action_logprobs, torch.squeeze(state_value), dist_entropy
-        
+        return action_logprobs, state_values, dist_entropy
+
+
 class PPO:
-    def __init__(self, state_dim, action_dim, n_latent_var, lr, betas, gamma, K_epochs, eps_clip):
-        self.lr = lr
-        self.betas = betas
+    def __init__(self, state_dim, action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, has_continuous_action_space, action_std_init=0.6):
+
+        self.has_continuous_action_space = has_continuous_action_space
+
+        if has_continuous_action_space:
+            self.action_std = action_std_init
+
         self.gamma = gamma
         self.eps_clip = eps_clip
         self.K_epochs = K_epochs
         
-        self.policy = ActorCritic(state_dim, action_dim, n_latent_var).to(device)
-        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=lr, betas=betas)
-        self.policy_old = ActorCritic(state_dim, action_dim, n_latent_var).to(device)
+        self.buffer = RolloutBuffer()
+
+        self.policy = ActorCritic(state_dim, action_dim, has_continuous_action_space, action_std_init).to(device)
+        self.optimizer = torch.optim.Adam([
+                        {'params': self.policy.actor.parameters(), 'lr': lr_actor},
+                        {'params': self.policy.critic.parameters(), 'lr': lr_critic}
+                    ])
+
+        self.policy_old = ActorCritic(state_dim, action_dim, has_continuous_action_space, action_std_init).to(device)
         self.policy_old.load_state_dict(self.policy.state_dict())
         
         self.MseLoss = nn.MSELoss()
-    
-    def update(self, memory):   
-        # Monte Carlo estimate of state rewards:
+
+
+    def set_action_std(self, new_action_std):
+        
+        if self.has_continuous_action_space:
+            self.action_std = new_action_std
+            self.policy.set_action_std(new_action_std)
+            self.policy_old.set_action_std(new_action_std)
+        
+        else:
+            print("--------------------------------------------------------------------------------------------")
+            print("WARNING : Calling PPO::set_action_std() on discrete action space policy")
+            print("--------------------------------------------------------------------------------------------")
+
+
+    def decay_action_std(self, action_std_decay_rate, min_action_std):
+        print("--------------------------------------------------------------------------------------------")
+
+        if self.has_continuous_action_space:
+            self.action_std = self.action_std - action_std_decay_rate
+            self.action_std = round(self.action_std, 4)
+            if (self.action_std <= min_action_std):
+                self.action_std = min_action_std
+                print("setting actor output action_std to min_action_std : ", self.action_std)
+            else:
+                print("setting actor output action_std to : ", self.action_std)
+            self.set_action_std(self.action_std)
+
+        else:
+            print("WARNING : Calling PPO::decay_action_std() on discrete action space policy")
+
+        print("--------------------------------------------------------------------------------------------")
+
+
+    def select_action(self, state):
+
+        if self.has_continuous_action_space:
+            with torch.no_grad():
+                state = torch.FloatTensor(state).to(device)
+                action, action_logprob = self.policy_old.act(state)
+
+            self.buffer.states.append(state)
+            self.buffer.actions.append(action)
+            self.buffer.logprobs.append(action_logprob)
+
+            return action.detach().cpu().numpy().flatten()
+
+        else:
+            with torch.no_grad():
+                state = torch.FloatTensor(state).to(device)
+                action, action_logprob = self.policy_old.act(state)
+            
+            self.buffer.states.append(state)
+            self.buffer.actions.append(action)
+            self.buffer.logprobs.append(action_logprob)
+
+            return action.item()
+
+
+    def update(self):
+
+        # Monte Carlo estimate of returns
         rewards = []
         discounted_reward = 0
-        for reward, is_terminal in zip(reversed(memory.rewards), reversed(memory.is_terminals)):
+        for reward, is_terminal in zip(reversed(self.buffer.rewards), reversed(self.buffer.is_terminals)):
             if is_terminal:
                 discounted_reward = 0
             discounted_reward = reward + (self.gamma * discounted_reward)
             rewards.insert(0, discounted_reward)
-        
-        # Normalizing the rewards:
-        rewards = torch.tensor(rewards, dtype=torch.float32).to(device)
-        rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-5)
-        
-        # convert list to tensor
-        old_states = torch.stack(memory.states).to(device).detach()
-        old_actions = torch.stack(memory.actions).to(device).detach()
-        old_logprobs = torch.stack(memory.logprobs).to(device).detach()
-        
-        # Optimize policy for K epochs:
-        for _ in range(self.K_epochs):
-            # Evaluating old actions and values :
-            logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions)
             
-            # Finding the ratio (pi_theta / pi_theta__old):
+        # Normalizing the rewards
+        rewards = torch.tensor(rewards, dtype=torch.float32).to(device)
+        rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
+
+        # convert list to tensor
+        old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach().to(device)
+        old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(device)
+        old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(device)
+
+        
+        # Optimize policy for K epochs
+        for _ in range(self.K_epochs):
+
+            # Evaluating old actions and values
+            logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions)
+
+            # match state_values tensor dimensions with rewards tensor
+            state_values = torch.squeeze(state_values)
+            
+            # Finding the ratio (pi_theta / pi_theta__old)
             ratios = torch.exp(logprobs - old_logprobs.detach())
-                
-            # Finding Surrogate Loss:
-            advantages = rewards - state_values.detach()
+
+            # Finding Surrogate Loss
+            advantages = rewards - state_values.detach()   
             surr1 = ratios * advantages
             surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
+
+            # final loss of clipped objective PPO
             loss = -torch.min(surr1, surr2) + 0.5*self.MseLoss(state_values, rewards) - 0.01*dist_entropy
             
             # take gradient step
             self.optimizer.zero_grad()
             loss.mean().backward()
             self.optimizer.step()
-        
-        # Copy new weights into old policy:
+            
+        # Copy new weights into old policy
         self.policy_old.load_state_dict(self.policy.state_dict())
+
+        # clear buffer
+        self.buffer.clear()
+    
+    
+    def save(self, checkpoint_path):
+        torch.save(self.policy_old.state_dict(), checkpoint_path)
+   
+
+    def load(self, checkpoint_path):
+        self.policy_old.load_state_dict(torch.load(checkpoint_path, map_location=lambda storage, loc: storage))
+        self.policy.load_state_dict(torch.load(checkpoint_path, map_location=lambda storage, loc: storage))
         
-def main():
-    ############## Hyperparameters ##############
-    env_name = "LunarLander-v2"
-    # creating environment
-    env = gym.make(env_name)
-    state_dim = env.observation_space.shape[0]
-    action_dim = 4
-    render = False
-    solved_reward = 230         # stop training if avg_reward > solved_reward
-    log_interval = 20           # print avg reward in the interval
-    max_episodes = 50000        # max training episodes
-    max_timesteps = 300         # max timesteps in one episode
-    n_latent_var = 64           # number of variables in hidden layer
-    update_timestep = 2000      # update policy every n timesteps
-    lr = 0.002
-    betas = (0.9, 0.999)
-    gamma = 0.99                # discount factor
-    K_epochs = 4                # update policy for K epochs
-    eps_clip = 0.2              # clip parameter for PPO
-    random_seed = None
-    #############################################
-    
-    if random_seed:
-        torch.manual_seed(random_seed)
-        env.seed(random_seed)
-    
-    memory = Memory()
-    ppo = PPO(state_dim, action_dim, n_latent_var, lr, betas, gamma, K_epochs, eps_clip)
-    print(lr,betas)
-    
-    # logging variables
-    running_reward = 0
-    avg_length = 0
-    timestep = 0
-    
-    # training loop
-    for i_episode in range(1, max_episodes+1):
-        state = env.reset()
-        for t in range(max_timesteps):
-            timestep += 1
-            
-            # Running policy_old:
-            action = ppo.policy_old.act(state, memory)
-            state, reward, done, _ = env.step(action)
-            
-            # Saving reward and is_terminal:
-            memory.rewards.append(reward)
-            memory.is_terminals.append(done)
-            
-            # update if its time
-            if timestep % update_timestep == 0:
-                ppo.update(memory)
-                memory.clear_memory()
-                timestep = 0
-            
-            running_reward += reward
-            if render:
-                env.render()
-            if done:
-                break
-                
-        avg_length += t
         
-        # stop training if avg_reward > solved_reward
-        if running_reward > (log_interval*solved_reward):
-            print("########## Solved! ##########")
-            torch.save(ppo.policy.state_dict(), './PPO_{}.pth'.format(env_name))
-            break
-            
-        # logging
-        if i_episode % log_interval == 0:
-            avg_length = int(avg_length/log_interval)
-            running_reward = int((running_reward/log_interval))
-            
-            print('Episode {} \t avg length: {} \t reward: {}'.format(i_episode, avg_length, running_reward))
-            running_reward = 0
-            avg_length = 0
-            
-if __name__ == '__main__':
-    main()
-    
+       
+
+
