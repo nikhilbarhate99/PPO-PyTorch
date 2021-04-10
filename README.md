@@ -1,16 +1,16 @@
 # PPO-PyTorch
 
-### UPDATE [9th April 2021] : 
+### UPDATE [April 2021] : 
 
 - merged discrete and continuous algorithms
-- linear decaying for the continuous action space `action_std`; to make training more stable for complex environments
+- added linear decaying for the continuous action space `action_std`; to make training more stable for complex environments
 - added different learning rates for actor and critic
-- episodes, timesteps and rewards are logged in `.csv` files
+- episodes, timesteps and rewards are now logged in `.csv` files
 - utils to plot graphs from log files
 - utils to test and make gifs from preTrained networks
-- jupyter notebook (`PPO_colab.ipynb`) combining all the files to train / test / plot graphs / make gifs on google colab
+- `PPO_colab.ipynb` combining all the files to train / test / plot graphs / make gifs on google colab in a convenient jupyter-notebook
 
-#### [Open in Google Colab](https://colab.research.google.com/github/nikhilbarhate99/PPO-PyTorch/blob/master/PPO_colab.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nikhilbarhate99/PPO-PyTorch/blob/master/PPO_colab.ipynb)
+#### [Open PPO_colab.ipynb in Google Colab](https://colab.research.google.com/github/nikhilbarhate99/PPO-PyTorch/blob/master/PPO_colab.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nikhilbarhate99/PPO-PyTorch/blob/master/PPO_colab.ipynb)
 
 
 ## Introduction
@@ -19,9 +19,9 @@ This repository provides a Minimal PyTorch implementation of Proximal Policy Opt
 but may require some hyperparameter-tuning or changes in the code.
 
 To keep the training procedure simple : 
-  - I have kept a **constant standard deviation** for the output action distribution (**multivariate normal with diagonal covariance matrix**) for the continuous environments, i.e. it is a hyperparameter and NOT a trainable parameter. However, it is **linearly decayed**. (action_std significantly affects performance)
-  - I have used simple **monte-carlo estimate** for calculating returns and NOT Generalized Advantage Estimate (you can check out the OpenAI spinning up implementation for that or try implementing it yourself).
-  - It is a single threaded implementation, i.e. only one worker collects experience. [One of the older forks](https://github.com/rhklite/Parallel-PPO-PyTorch) of this repository has been modified to have Parallel workers
+  - It has a **constant standard deviation** for the output action distribution (**multivariate normal with diagonal covariance matrix**) for the continuous environments, i.e. it is a hyperparameter and NOT a trainable parameter. However, it is **linearly decayed**. (action_std significantly affects performance)
+  - It uses simple **monte-carlo estimate** for calculating returns and NOT Generalized Advantage Estimate (check out the OpenAI spinning up implementation for that).
+  - It is a **single threaded implementation**, i.e. only one worker collects experience. [One of the older forks](https://github.com/rhklite/Parallel-PPO-PyTorch) of this repository has been modified to have Parallel workers
 
 A concise explaination of PPO algorithm can be found [here](https://stackoverflow.com/questions/46422845/what-is-the-way-to-understand-proximal-policy-optimization-algorithm-in-rl)
 
@@ -32,10 +32,10 @@ A concise explaination of PPO algorithm can be found [here](https://stackoverflo
 - To test a preTrained network : run `test.py`
 - To plot graphs using log files : run `plot_graph.py`
 - To save images for gif and make gif using a preTrained network : run `make_gif.py`
-- All parameters and hyperparamters to control training/testing/graphs/gifs/ are in their respective `.py` files
-- `PPO_colab.ipynb` combines all the files in a convenient jupyter-notebook
+- All parameters and hyperparamters to control training / testing / graphs / gifs are in their respective `.py` file
+- `PPO_colab.ipynb` combines all the files in a jupyter-notebook
 
-#### [Open in Google Colab](https://colab.research.google.com/github/nikhilbarhate99/PPO-PyTorch/blob/master/PPO_colab.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nikhilbarhate99/PPO-PyTorch/blob/master/PPO_colab.ipynb)
+#### [Open PPO_colab.ipynb in Google Colab](https://colab.research.google.com/github/nikhilbarhate99/PPO-PyTorch/blob/master/PPO_colab.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nikhilbarhate99/PPO-PyTorch/blob/master/PPO_colab.ipynb)
 
 ## Citing 
 
@@ -74,16 +74,30 @@ Please use this bibtex if you want to cite this repository in your publications 
 
 
 ## Dependencies
-Trained and tested on:
+Trained and Tested on:
 ```
-Python 3.6
-PyTorch 1.0
-NumPy 1.15.3
-gym 0.10.8
-Pillow 5.3.0
+Python 3
+PyTorch
+NumPy
+gym
+Pillow
 ```
+environments 
+```
+Roboschool
+pybullet
+```
+for graphs and gifs
+```
+pandas
+matplotlib
+Pillow
+```
+
 
 ## References
 
 - [PPO paper](https://arxiv.org/abs/1707.06347)
 - [OpenAI Spinning up](https://spinningup.openai.com/en/latest/)
+
+
