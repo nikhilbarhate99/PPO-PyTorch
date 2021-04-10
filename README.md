@@ -34,6 +34,8 @@ A concise explaination of PPO algorithm can be found [here](https://stackoverflo
 - To save images for gif and make gif using a preTrained network : run `make_gif.py`
 - All parameters and hyperparamters to control training / testing / graphs / gifs are in their respective `.py` file
 - `PPO_colab.ipynb` combines all the files in a jupyter-notebook
+- All the hyperparameters used for training are listed in the [`README.md` in PPO_preTrained directory](https://github.com/nikhilbarhate99/PPO-PyTorch/tree/master/PPO_preTrained)
+
 
 #### [Open PPO_colab.ipynb in Google Colab](https://colab.research.google.com/github/nikhilbarhate99/PPO-PyTorch/blob/master/PPO_colab.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nikhilbarhate99/PPO-PyTorch/blob/master/PPO_colab.ipynb)
 
@@ -82,12 +84,12 @@ NumPy
 gym
 Pillow
 ```
-environments 
+Training Environments 
 ```
 Roboschool
 pybullet
 ```
-for graphs and gifs
+Graphs and gifs
 ```
 pandas
 matplotlib
