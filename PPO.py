@@ -123,10 +123,12 @@ class ActorCritic(nn.Module):
             action_var = self.action_var.expand_as(action_mean)
             cov_mat = torch.diag_embed(action_var).to(device)
             dist = MultivariateNormal(action_mean, cov_mat)
+            
+            action = action.reshape(-1, self.action_dim)
+
         else:
             action_probs = self.actor(state)
             dist = Categorical(action_probs)
-        action = action.reshape(-1, self.action_dim)
         action_logprobs = dist.log_prob(action)
         dist_entropy = dist.entropy()
         state_values = self.critic(state)
