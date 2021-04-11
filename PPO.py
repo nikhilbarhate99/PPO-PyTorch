@@ -124,7 +124,9 @@ class ActorCritic(nn.Module):
             cov_mat = torch.diag_embed(action_var).to(device)
             dist = MultivariateNormal(action_mean, cov_mat)
             
-            action = action.reshape(-1, self.action_dim)
+            # For Single Action Environments.
+            if self.action_dim == 1:
+                action = action.reshape(-1, self.action_dim)
 
         else:
             action_probs = self.actor(state)
