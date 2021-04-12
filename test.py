@@ -46,8 +46,8 @@ def test():
     has_continuous_action_space = True
     max_ep_len = 1000           # max timesteps in one episode
     action_std = 0.1            # set same std for action distribution which was used while saving
-    
-    
+
+
     render = True              # render environment on screen
     frame_delay = 0             # if required; add delay b/w frames
 
@@ -114,6 +114,9 @@ def test():
             if done:
                 break
 
+        # clear buffer
+        ppo_agent.buffer.clear()
+
         test_running_reward +=  ep_reward
         print('Episode: {} \t\t Reward: {}'.format(ep, round(ep_reward, 2)))
         ep_reward = 0
@@ -135,10 +138,3 @@ def test():
 if __name__ == '__main__':
 
     test()
-    
-    
-    
-    
-    
-    
-    

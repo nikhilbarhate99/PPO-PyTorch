@@ -28,7 +28,7 @@ PPO_gif_images/env_name/000003.jpg
 ...
 
 
-if this section is run multiple times or for multiple episodes for the same env_name;
+if save_gif_images() is run multiple times or for multiple episodes for the same env_name;
 then the saved images will be overwritten.
 
 """
@@ -125,6 +125,9 @@ def save_gif_images(env_name, has_continuous_action_space, max_ep_len, action_st
 		    if done:
 		        break
 
+		# clear buffer
+        ppo_agent.buffer.clear()
+		
 		test_running_reward +=  ep_reward
 		print('Episode: {} \t\t Reward: {}'.format(ep, round(ep_reward, 2)))
 		ep_reward = 0
@@ -136,6 +139,8 @@ def save_gif_images(env_name, has_continuous_action_space, max_ep_len, action_st
 
 
 	print("============================================================================================")
+
+	print("total number of frames / timesteps / images saved : ", t)
 
 	avg_test_reward = test_running_reward / total_test_episodes
 	avg_test_reward = round(avg_test_reward, 2)
@@ -261,19 +266,3 @@ if __name__ == '__main__':
 
 	# list byte size (in MB) of gifs in one "PPO_gif/env_name/" folder
 	list_gif_size(env_name)
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
