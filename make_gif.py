@@ -28,7 +28,7 @@ PPO_gif_images/env_name/000003.jpg
 ...
 
 
-if save_gif_images() is run multiple times or for multiple episodes for the same env_name;
+if this section is run multiple times or for multiple episodes for the same env_name;
 then the saved images will be overwritten.
 
 """
@@ -126,8 +126,8 @@ def save_gif_images(env_name, has_continuous_action_space, max_ep_len, action_st
 		        break
 
 		# clear buffer
-        ppo_agent.buffer.clear()
-		
+		ppo_agent.buffer.clear()
+
 		test_running_reward +=  ep_reward
 		print('Episode: {} \t\t Reward: {}'.format(ep, round(ep_reward, 2)))
 		ep_reward = 0
@@ -163,7 +163,7 @@ def save_gif(env_name):
 	gif_num = 0     #### change this to prevent overwriting gifs in same env_name folder
 
 	# adjust following parameters to get desired duration, size (bytes) and smoothness of gif
-	total_timesteps = 200
+	total_timesteps = 300
 	step = 10
 	frame_duration = 150
 
@@ -252,11 +252,22 @@ if __name__ == '__main__':
 	# action_std = 0.1            # set same std for action distribution which was used while saving
 
 
-	env_name = "RoboschoolWalker2d-v1"
+	# env_name = "RoboschoolWalker2d-v1"
+	# has_continuous_action_space = True
+	# max_ep_len = 1000           # max timesteps in one episode
+	# action_std = 0.1            # set same std for action distribution which was used while saving
+
+
+	env_name = "RoboschoolHalfCheetah-v1"
 	has_continuous_action_space = True
 	max_ep_len = 1000           # max timesteps in one episode
 	action_std = 0.1            # set same std for action distribution which was used while saving
 
+
+	# env_name = "RoboschoolHopper-v1"
+	# has_continuous_action_space = True
+	# max_ep_len = 1000           # max timesteps in one episode
+	# action_std = 0.1            # set same std for action distribution which was used while saving
 
 	# save .jpg images in PPO_gif_images folder
 	save_gif_images(env_name, has_continuous_action_space, max_ep_len, action_std)
