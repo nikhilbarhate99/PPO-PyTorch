@@ -15,12 +15,12 @@
 
 ## Introduction
 
-This repository provides a Minimal PyTorch implementation of Proximal Policy Optimization with clipped objective for OpenAI gym environments. It is primarily intended for beginners in RL for understanding the PPO algorithm. It can still be used for complex environments 
+This repository provides a Minimal PyTorch implementation of Proximal Policy Optimization (PPO) with clipped objective for OpenAI gym environments. It is primarily intended for beginners in [Reinforcement Learning](https://en.wikipedia.org/wiki/Reinforcement_learning) for understanding the PPO algorithm. It can still be used for complex environments 
 but may require some hyperparameter-tuning or changes in the code.
 
 To keep the training procedure simple : 
   - It has a **constant standard deviation** for the output action distribution (**multivariate normal with diagonal covariance matrix**) for the continuous environments, i.e. it is a hyperparameter and NOT a trainable parameter. However, it is **linearly decayed**. (action_std significantly affects performance)
-  - It uses simple **monte-carlo estimate** for calculating returns and NOT Generalized Advantage Estimate (check out the OpenAI spinning up implementation for that).
+  - It uses simple **monte-carlo estimate** for calculating advantages and NOT Generalized Advantage Estimate (check out the OpenAI spinning up implementation for that).
   - It is a **single threaded implementation**, i.e. only one worker collects experience. [One of the older forks](https://github.com/rhklite/Parallel-PPO-PyTorch) of this repository has been modified to have Parallel workers
 
 A concise explaination of PPO algorithm can be found [here](https://stackoverflow.com/questions/46422845/what-is-the-way-to-understand-proximal-policy-optimization-algorithm-in-rl)
@@ -34,10 +34,13 @@ A concise explaination of PPO algorithm can be found [here](https://stackoverflo
 - To save images for gif and make gif using a preTrained network : run `make_gif.py`
 - All parameters and hyperparamters to control training / testing / graphs / gifs are in their respective `.py` file
 - `PPO_colab.ipynb` combines all the files in a jupyter-notebook
-- All the hyperparameters used for training are listed in the [`README.md` in PPO_preTrained directory](https://github.com/nikhilbarhate99/PPO-PyTorch/tree/master/PPO_preTrained)
+- All the **hyperparameters used for training (preTrained) policies are listed** in the [`README.md` in PPO_preTrained directory](https://github.com/nikhilbarhate99/PPO-PyTorch/tree/master/PPO_preTrained)
 
 
 #### [Open `PPO_colab.ipynb` in Google Colab](https://colab.research.google.com/github/nikhilbarhate99/PPO-PyTorch/blob/master/PPO_colab.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nikhilbarhate99/PPO-PyTorch/blob/master/PPO_colab.ipynb)
+
+#### Note :
+  - if the environment runs on CPU, use CPU as device for faster training. Box-2d and Roboschool run on CPU and training them on GPU device will be significantly slower because the data will be moved between CPU and GPU often
 
 ## Citing 
 
@@ -53,6 +56,15 @@ Please use this bibtex if you want to cite this repository in your publications 
     }
 
 ## Results
+
+| PPO Continuous RoboschoolHalfCheetah-v1  | PPO Continuous RoboschoolHalfCheetah-v1 |
+| :-------------------------:|:-------------------------: |
+| ![](https://github.com/nikhilbarhate99/PPO-PyTorch/blob/master/PPO_gifs/RoboschoolHalfCheetah-v1/PPO_RoboschoolHalfCheetah-v1_gif_0.gif) |  ![](https://github.com/nikhilbarhate99/PPO-PyTorch/blob/master/PPO_figs/RoboschoolHalfCheetah-v1/PPO_RoboschoolHalfCheetah-v1_fig_0.png) |
+
+
+| PPO Continuous RoboschoolHopper-v1  | PPO Continuous RoboschoolHopper-v1 |
+| :-------------------------:|:-------------------------: |
+| ![](https://github.com/nikhilbarhate99/PPO-PyTorch/blob/master/PPO_gifs/RoboschoolHopper-v1/PPO_RoboschoolHopper-v1_gif_0.gif) |  ![](https://github.com/nikhilbarhate99/PPO-PyTorch/blob/master/PPO_figs/RoboschoolHopper-v1/PPO_RoboschoolHopper-v1_fig_0.png) |
 
 
 | PPO Continuous RoboschoolWalker2d-v1  | PPO Continuous RoboschoolWalker2d-v1 |
@@ -82,10 +94,10 @@ Python 3
 PyTorch
 NumPy
 gym
-Pillow
 ```
 Training Environments 
 ```
+Box-2d
 Roboschool
 pybullet
 ```
