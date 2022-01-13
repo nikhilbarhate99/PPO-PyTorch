@@ -45,7 +45,7 @@ Please use this bibtex if you want to cite this repository in your publications 
 
 | PPO Continuous PandaReachDense-v2  | PPO Continuous PandaReachDense-v2 |
 | :-------------------------:|:-------------------------: |
-| ![](https://github.com/alobbezoo/PPO-Panda/PPO_gifs/PandaReachDense-v2/PPO_PandaReachDense-v2_gif_0.gif) |  ![](https://github.com/alobbezoo/PPO-Panda/blob/master/PPO_figs/PandaReachDense-v2/PPO_PandaReachDense-v2_fig_0.png) |
+| ![](https://github.com/alobbezoo/PPO-Panda/blob/b470118413237fd8d52055cb9880a3b5dfa17040/PPO_gifs/PandaReachDense-v2/PPO_PandaReachDense-v2_gif_0.gif) |  ![](https://github.com/alobbezoo/PPO-Panda/blob/master/PPO_figs/PandaReachDense-v2/PPO_PandaReachDense-v2_fig_0.png) |
 
 
 ## Dependencies
