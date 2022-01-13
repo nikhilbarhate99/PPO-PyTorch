@@ -4,12 +4,18 @@ import time
 from datetime import datetime
 
 import torch
+import torch.nn as nn
+from torch.distributions import MultivariateNormal
+from torch.distributions import Categorical
+
 import numpy as np
 
 import gym
-import roboschool
+import panda_gym
+import pybullet
 
-# import pybullet_envs
+# import roboschool
+#import pybullet_envs
 
 from PPO import PPO
 
@@ -24,16 +30,16 @@ def train():
 
     ####### initialize environment hyperparameters ######
 
-    env_name = "RoboschoolWalker2d-v1"
+    env_name = "PandaReachDense-v2"
 
     has_continuous_action_space = True  # continuous action space; else discrete
 
-    max_ep_len = 1000                   # max timesteps in one episode
-    max_training_timesteps = int(3e6)   # break training loop if timeteps > max_training_timesteps
+    max_ep_len = 400                   # max timesteps in one episode
+    max_training_timesteps = int(1e5)   # break training loop if timeteps > max_training_timesteps
 
-    print_freq = max_ep_len * 10        # print avg reward in the interval (in num timesteps)
+    print_freq = max_ep_len * 4        # print avg reward in the interval (in num timesteps)
     log_freq = max_ep_len * 2           # log avg reward in the interval (in num timesteps)
-    save_model_freq = int(1e5)          # save model frequency (in num timesteps)
+    save_model_freq = int(2e4)          # save model frequency (in num timesteps)
 
     action_std = 0.6                    # starting std for action distribution (Multivariate Normal)
     action_std_decay_rate = 0.05        # linearly decay action_std (action_std = action_std - action_std_decay_rate)
@@ -68,7 +74,8 @@ def train():
     env = gym.make(env_name)
 
     # state space dimension
-    state_dim = env.observation_space.shape[0]
+    state_dim = 6 #env.observation_space.shape[0]
+    # we know that the state will have 6 elements, xyz of target and gripper (3+3)
 
     # action space dimension
     if has_continuous_action_space:
@@ -209,14 +216,21 @@ def train():
     # training loop
     while time_step <= max_training_timesteps:
 
-        state = env.reset()
+        # state = env.reset()
+        state_dict = env.reset()
+        state = state_dict["observation"]
+
         current_ep_reward = 0
 
         for t in range(1, max_ep_len+1):
 
             # select action with policy
             action = ppo_agent.select_action(state)
-            state, reward, done, _ = env.step(action)
+            # state, reward, done, _ = env.step(action)
+            next_state_dict, reward, done, _ = env.step(action)
+            state = np.concatenate((next_state_dict['observation'][0:3], next_state_dict['desired_goal']))
+            # NOTE: the next_state_dict is actually a dictionary which stores several different observations
+            # concatenate the key observations for training here
 
             # saving reward and is_terminals
             ppo_agent.buffer.rewards.append(reward)
