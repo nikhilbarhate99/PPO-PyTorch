@@ -1,6 +1,6 @@
 # PPO-Panda
 
-### UPDATE [April 2022] : 
+### UPDATE [January 2022] : 
 
 - Modified [this commit](https://github.com/nikhilbarhate99/PPO-PyTorch) created by Nikhil Barhate to accomodate the Franka Emika Panda Robot.
 - Installed Panda-Gym
