@@ -8,9 +8,8 @@ import numpy as np
 from PIL import Image
 
 import gym
-import roboschool
-
-# import pybullet_envs
+import panda_gym
+import pybullet
 
 from PPO import PPO
 
@@ -40,7 +39,7 @@ def save_gif_images(env_name, has_continuous_action_space, max_ep_len, action_st
 
 	print("============================================================================================")
 
-	total_test_episodes = 1     # save gif for only one episode
+	total_test_episodes = 10     # save gif for only one episode
 
 
 	K_epochs = 80               # update policy for K epochs
@@ -51,10 +50,10 @@ def save_gif_images(env_name, has_continuous_action_space, max_ep_len, action_st
 	lr_critic = 0.001         # learning rate for critic
 
 
-	env = gym.make(env_name)
+	env = gym.make(env_name, render=True)
 
 	# state space dimension
-	state_dim = env.observation_space.shape[0]
+	state_dim = 6 #env.observation_space.shape[0]
 
 	# action space dimension
 	if has_continuous_action_space:
@@ -110,20 +109,29 @@ def save_gif_images(env_name, has_continuous_action_space, max_ep_len, action_st
 	for ep in range(1, total_test_episodes+1):
 
 		ep_reward = 0
-		state = env.reset()
+		# state = env.reset()
+		state_dict = env.reset()
+		state = np.concatenate((state_dict['observation'][0:3], state_dict['desired_goal']))
 
 		for t in range(1, max_ep_len+1):
-		    action = ppo_agent.select_action(state)
-		    state, reward, done, _ = env.step(action)
-		    ep_reward += reward
+			action = ppo_agent.select_action(state)
+			next_state_dict, reward, done, _ = env.step(action)
+			state = np.concatenate((next_state_dict['observation'][0:3], next_state_dict['desired_goal']))
+			# action = ppo_agent.select_action(state)
+			# state, reward, done, _ = env.step(action)
+			print(reward)
+			ep_reward += reward
+			img = env.render(mode = 'rgb_array')
 
-		    img = env.render(mode = 'rgb_array')
+			img = Image.fromarray(img)
 
-		    img = Image.fromarray(img)
-		    img.save(gif_images_dir + '/' + str(t).zfill(6) + '.jpg')
+			img = img.convert('RGB')
+			# new line to convert the type
 
-		    if done:
-		        break
+			img.save(gif_images_dir + '/' + str(t).zfill(6) + '.jpg')
+
+			if done:
+				break
 
 		# clear buffer
 		ppo_agent.buffer.clear()
@@ -234,40 +242,10 @@ def list_gif_size(env_name):
 if __name__ == '__main__':
 
 
-	# env_name = "CartPole-v1"
-	# has_continuous_action_space = False
-	# max_ep_len = 400
-	# action_std = None
-
-
-	# env_name = "LunarLander-v2"
-	# has_continuous_action_space = False
-	# max_ep_len = 500
-	# action_std = None
-
-
-	# env_name = "BipedalWalker-v2"
-	# has_continuous_action_space = True
-	# max_ep_len = 1500           # max timesteps in one episode
-	# action_std = 0.1            # set same std for action distribution which was used while saving
-
-
-	# env_name = "RoboschoolWalker2d-v1"
-	# has_continuous_action_space = True
-	# max_ep_len = 1000           # max timesteps in one episode
-	# action_std = 0.1            # set same std for action distribution which was used while saving
-
-
-	env_name = "RoboschoolHalfCheetah-v1"
+	env_name = "PandaReachDense-v2"
 	has_continuous_action_space = True
 	max_ep_len = 1000           # max timesteps in one episode
 	action_std = 0.1            # set same std for action distribution which was used while saving
-
-
-	# env_name = "RoboschoolHopper-v1"
-	# has_continuous_action_space = True
-	# max_ep_len = 1000           # max timesteps in one episode
-	# action_std = 0.1            # set same std for action distribution which was used while saving
 
 	# save .jpg images in PPO_gif_images folder
 	save_gif_images(env_name, has_continuous_action_space, max_ep_len, action_std)

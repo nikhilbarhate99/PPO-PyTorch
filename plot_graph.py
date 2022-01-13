@@ -7,10 +7,7 @@ def save_graph():
 
     print("============================================================================================")
 
-    # env_name = 'CartPole-v1'
-    # env_name = 'LunarLander-v2'
-    # env_name = 'BipedalWalker-v2'
-    env_name = 'RoboschoolWalker2d-v1'
+    env_name = "PandaReachDense-v2"
 
 
     fig_num = 0     #### change this to prevent overwriting figures in same env_name folder
@@ -22,7 +19,7 @@ def save_graph():
 
 
     # smooth out rewards to get a smooth and a less smooth (var) plot lines
-    window_len_smooth = 20
+    window_len_smooth = 50
     min_window_len_smooth = 1
     linewidth_smooth = 1.5
     alpha_smooth = 1
@@ -84,7 +81,7 @@ def save_graph():
         data_avg['reward_smooth'] = data_avg['reward'].rolling(window=window_len_smooth, win_type='triang', min_periods=min_window_len_smooth).mean()
         data_avg['reward_var'] = data_avg['reward'].rolling(window=window_len_var, win_type='triang', min_periods=min_window_len_var).mean()
 
-        data_avg.plot(kind='line', x='timestep' , y='reward_smooth',ax=ax,color=colors[0],  linewidth=linewidth_smooth, alpha=alpha_smooth)
+        # data_avg.plot(kind='line', x='timestep' , y='reward_smooth',ax=ax,color=colors[0],  linewidth=linewidth_smooth, alpha=alpha_smooth)
         data_avg.plot(kind='line', x='timestep' , y='reward_var',ax=ax,color=colors[0],  linewidth=linewidth_var, alpha=alpha_var)
 
         # keep only reward_smooth in the legend and rename it
@@ -100,6 +97,8 @@ def save_graph():
 
             # plot the lines
             run.plot(kind='line', x='timestep' , y='reward_smooth_' + str(i),ax=ax,color=colors[i % len(colors)],  linewidth=linewidth_smooth, alpha=alpha_smooth)
+            # not interested in avg
+
             run.plot(kind='line', x='timestep' , y='reward_var_' + str(i),ax=ax,color=colors[i % len(colors)],  linewidth=linewidth_var, alpha=alpha_var)
 
         # keep alternate elements (reward_smooth_i) in the legend
