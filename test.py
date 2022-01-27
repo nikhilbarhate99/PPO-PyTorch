@@ -7,9 +7,9 @@ import torch
 import numpy as np
 
 import gym
-import roboschool
+#import roboschool
 
-# import pybullet_envs
+import pybulletgym
 
 from PPO import PPO
 
@@ -42,6 +42,7 @@ def test():
     # action_std = 0.1            # set same std for action distribution which was used while saving
 
 
+    env_name_ = "Walker2DPyBulletEnv-v0"
     env_name = "RoboschoolWalker2d-v1"
     has_continuous_action_space = True
     max_ep_len = 1000           # max timesteps in one episode
@@ -64,7 +65,7 @@ def test():
     #####################################################
 
 
-    env = gym.make(env_name)
+    env = gym.make(env_name_)
 
     # state space dimension
     state_dim = env.observation_space.shape[0]
