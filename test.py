@@ -9,17 +9,11 @@ import numpy as np
 import gym
 import roboschool
 
-# import pybullet_envs
-
 from PPO import PPO
 
 
-
 #################################### Testing ###################################
-
-
 def test():
-
     print("============================================================================================")
 
     ################## hyperparameters ##################
@@ -29,28 +23,23 @@ def test():
     # max_ep_len = 400
     # action_std = None
 
-
     # env_name = "LunarLander-v2"
     # has_continuous_action_space = False
     # max_ep_len = 300
     # action_std = None
-
 
     # env_name = "BipedalWalker-v2"
     # has_continuous_action_space = True
     # max_ep_len = 1500           # max timesteps in one episode
     # action_std = 0.1            # set same std for action distribution which was used while saving
 
-
     env_name = "RoboschoolWalker2d-v1"
     has_continuous_action_space = True
     max_ep_len = 1000           # max timesteps in one episode
     action_std = 0.1            # set same std for action distribution which was used while saving
 
-
     render = True              # render environment on screen
     frame_delay = 0             # if required; add delay b/w frames
-
 
     total_test_episodes = 10    # total num of testing episodes
 
@@ -63,7 +52,6 @@ def test():
 
     #####################################################
 
-
     env = gym.make(env_name)
 
     # state space dimension
@@ -75,16 +63,13 @@ def test():
     else:
         action_dim = env.action_space.n
 
-
     # initialize a PPO agent
     ppo_agent = PPO(state_dim, action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, has_continuous_action_space, action_std)
-
 
     # preTrained weights directory
 
     random_seed = 0             #### set this to load a particular checkpoint trained on random seed
     run_num_pretrained = 0      #### set this to load a particular checkpoint num
-
 
     directory = "PPO_preTrained" + '/' + env_name + '/'
     checkpoint_path = directory + "PPO_{}_{}_{}.pth".format(env_name, random_seed, run_num_pretrained)
@@ -93,8 +78,6 @@ def test():
     ppo_agent.load(checkpoint_path)
 
     print("--------------------------------------------------------------------------------------------")
-
-
 
     test_running_reward = 0
 
@@ -123,7 +106,6 @@ def test():
 
     env.close()
 
-
     print("============================================================================================")
 
     avg_test_reward = test_running_reward / total_test_episodes
@@ -131,8 +113,6 @@ def test():
     print("average test reward : " + str(avg_test_reward))
 
     print("============================================================================================")
-
-
 
 
 if __name__ == '__main__':

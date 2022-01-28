@@ -4,22 +4,16 @@ import matplotlib.pyplot as plt
 
 
 def save_graph():
-
     print("============================================================================================")
-
     # env_name = 'CartPole-v1'
     # env_name = 'LunarLander-v2'
     # env_name = 'BipedalWalker-v2'
     env_name = 'RoboschoolWalker2d-v1'
 
-
     fig_num = 0     #### change this to prevent overwriting figures in same env_name folder
-
     plot_avg = True    # plot average of all runs; else plot all runs separately
-
     fig_width = 10
     fig_height = 6
-
 
     # smooth out rewards to get a smooth and a less smooth (var) plot lines
     window_len_smooth = 20
@@ -32,9 +26,7 @@ def save_graph():
     linewidth_var = 2
     alpha_var = 0.1
 
-
     colors = ['red', 'blue', 'green', 'orange', 'purple', 'olive', 'brown', 'magenta', 'cyan', 'crimson','gray', 'black']
-
 
     # make directory for saving figures
     figures_dir = "PPO_figs"
@@ -46,16 +38,13 @@ def save_graph():
     if not os.path.exists(figures_dir):
         os.makedirs(figures_dir)
 
-
     fig_save_path = figures_dir + '/PPO_' + env_name + '_fig_' + str(fig_num) + '.png'
-
 
     # get number of log files in directory
     log_dir = "PPO_logs" + '/' + env_name + '/'
 
     current_num_files = next(os.walk(log_dir))[2]
     num_runs = len(current_num_files)
-
 
     all_runs = []
 
@@ -70,7 +59,6 @@ def save_graph():
 
         all_runs.append(data)
         print("--------------------------------------------------------------------------------------------")
-
 
     ax = plt.gca()
 
@@ -90,7 +78,6 @@ def save_graph():
         # keep only reward_smooth in the legend and rename it
         handles, labels = ax.get_legend_handles_labels()
         ax.legend([handles[0]], ["reward_avg_" + str(len(all_runs)) + "_runs"], loc=2)
-
 
     else:
         for i, run in enumerate(all_runs):
@@ -112,11 +99,8 @@ def save_graph():
                 new_labels.append(labels[i])
         ax.legend(new_handles, new_labels, loc=2)
 
-
-
     # ax.set_yticks(np.arange(0, 1800, 200))
     # ax.set_xticks(np.arange(0, int(4e6), int(5e5)))
-
 
     ax.grid(color='gray', linestyle='-', linewidth=1, alpha=0.2)
 
@@ -125,18 +109,14 @@ def save_graph():
 
     plt.title(env_name, fontsize=14)
 
-
     fig = plt.gcf()
     fig.set_size_inches(fig_width, fig_height)
 
     print("============================================================================================")
-
     plt.savefig(fig_save_path)
     print("figure saved at : ", fig_save_path)
-
     print("============================================================================================")
-
-
+    
     plt.show()
 
 

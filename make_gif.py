@@ -10,12 +10,7 @@ from PIL import Image
 import gym
 import roboschool
 
-# import pybullet_envs
-
 from PPO import PPO
-
-
-
 
 """
 One frame corresponding to each timestep is saved in a folder :
@@ -37,19 +32,15 @@ then the saved images will be overwritten.
 
 
 def save_gif_images(env_name, has_continuous_action_space, max_ep_len, action_std):
-
 	print("============================================================================================")
 
 	total_test_episodes = 1     # save gif for only one episode
-
-
 	K_epochs = 80               # update policy for K epochs
 	eps_clip = 0.2              # clip parameter for PPO
 	gamma = 0.99                # discount factor
 
 	lr_actor = 0.0003         # learning rate for actor
 	lr_critic = 0.001         # learning rate for critic
-
 
 	env = gym.make(env_name)
 
@@ -61,8 +52,6 @@ def save_gif_images(env_name, has_continuous_action_space, max_ep_len, action_st
 		action_dim = env.action_space.shape[0]
 	else:
 		action_dim = env.action_space.n
-
-
 
 	# make directory for saving gif images
 	gif_images_dir = "PPO_gif_images" + '/'
@@ -84,16 +73,11 @@ def save_gif_images(env_name, has_continuous_action_space, max_ep_len, action_st
 	if not os.path.exists(gif_dir):
 		os.makedirs(gif_dir)
 
-
-
 	ppo_agent = PPO(state_dim, action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, has_continuous_action_space, action_std)
 
-
 	# preTrained weights directory
-
 	random_seed = 0             #### set this to load a particular checkpoint trained on random seed
 	run_num_pretrained = 0      #### set this to load a particular checkpoint num
-
 
 	directory = "PPO_preTrained" + '/' + env_name + '/'
 	checkpoint_path = directory + "PPO_{}_{}_{}.pth".format(env_name, random_seed, run_num_pretrained)
@@ -102,9 +86,6 @@ def save_gif_images(env_name, has_continuous_action_space, max_ep_len, action_st
 	ppo_agent.load(checkpoint_path)
 
 	print("--------------------------------------------------------------------------------------------")
-
-
-
 	test_running_reward = 0
 
 	for ep in range(1, total_test_episodes+1):
@@ -132,25 +113,14 @@ def save_gif_images(env_name, has_continuous_action_space, max_ep_len, action_st
 		print('Episode: {} \t\t Reward: {}'.format(ep, round(ep_reward, 2)))
 		ep_reward = 0
 
-
-
 	env.close()
 
-
-
 	print("============================================================================================")
-
 	print("total number of frames / timesteps / images saved : ", t)
-
 	avg_test_reward = test_running_reward / total_test_episodes
 	avg_test_reward = round(avg_test_reward, 2)
 	print("average test reward : " + str(avg_test_reward))
-
 	print("============================================================================================")
-
-
-
-
 
 
 
@@ -167,10 +137,8 @@ def save_gif(env_name):
 	step = 10
 	frame_duration = 150
 
-
 	# input images
 	gif_images_dir = "PPO_gif_images/" + env_name + '/*.jpg'
-
 
 	# ouput gif path
 	gif_dir = "PPO_gifs"
@@ -183,17 +151,12 @@ def save_gif(env_name):
 
 	gif_path = gif_dir + '/PPO_' + env_name + '_gif_' + str(gif_num) + '.gif'
 
-
-
 	img_paths = sorted(glob.glob(gif_images_dir))
 	img_paths = img_paths[:total_timesteps]
 	img_paths = img_paths[::step]
 
-
 	print("total frames in gif : ", len(img_paths))
 	print("total duration of gif : " + str(round(len(img_paths) * frame_duration / 1000, 2)) + " seconds")
-
-
 
 	# save gif
 	img, *imgs = [Image.open(f) for f in img_paths]
@@ -201,68 +164,46 @@ def save_gif(env_name):
 
 	print("saved gif at : ", gif_path)
 
-
-
 	print("============================================================================================")
-
-
-
-
 
 
 ############################# check gif byte size ##############################
-
 def list_gif_size(env_name):
-
 	print("============================================================================================")
-
 	gif_dir = "PPO_gifs/" + env_name + '/*.gif'
-
 	gif_paths = sorted(glob.glob(gif_dir))
-
 	for gif_path in gif_paths:
 		file_size = os.path.getsize(gif_path)
 		print(gif_path + '\t\t' + str(round(file_size / (1024 * 1024), 2)) + " MB")
-
-
 	print("============================================================================================")
 
 
-
-
-
 if __name__ == '__main__':
-
 
 	# env_name = "CartPole-v1"
 	# has_continuous_action_space = False
 	# max_ep_len = 400
 	# action_std = None
 
-
 	# env_name = "LunarLander-v2"
 	# has_continuous_action_space = False
 	# max_ep_len = 500
 	# action_std = None
-
 
 	# env_name = "BipedalWalker-v2"
 	# has_continuous_action_space = True
 	# max_ep_len = 1500           # max timesteps in one episode
 	# action_std = 0.1            # set same std for action distribution which was used while saving
 
-
 	# env_name = "RoboschoolWalker2d-v1"
 	# has_continuous_action_space = True
 	# max_ep_len = 1000           # max timesteps in one episode
 	# action_std = 0.1            # set same std for action distribution which was used while saving
 
-
 	env_name = "RoboschoolHalfCheetah-v1"
 	has_continuous_action_space = True
 	max_ep_len = 1000           # max timesteps in one episode
 	action_std = 0.1            # set same std for action distribution which was used while saving
-
 
 	# env_name = "RoboschoolHopper-v1"
 	# has_continuous_action_space = True

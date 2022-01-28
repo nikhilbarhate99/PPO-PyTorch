@@ -3,31 +3,20 @@ import torch.nn as nn
 from torch.distributions import MultivariateNormal
 from torch.distributions import Categorical
 
-
-
 ################################## set device ##################################
-
 print("============================================================================================")
-
-
 # set device to cpu or cuda
 device = torch.device('cpu')
-
 if(torch.cuda.is_available()): 
     device = torch.device('cuda:0') 
     torch.cuda.empty_cache()
     print("Device set to : " + str(torch.cuda.get_device_name(device)))
 else:
     print("Device set to : cpu")
-    
 print("============================================================================================")
 
 
-
-
 ################################## PPO Policy ##################################
-
-
 class RolloutBuffer:
     def __init__(self):
         self.actions = []
@@ -36,7 +25,6 @@ class RolloutBuffer:
         self.rewards = []
         self.is_terminals = []
     
-
     def clear(self):
         del self.actions[:]
         del self.states[:]
@@ -50,11 +38,10 @@ class ActorCritic(nn.Module):
         super(ActorCritic, self).__init__()
 
         self.has_continuous_action_space = has_continuous_action_space
-
+        
         if has_continuous_action_space:
             self.action_dim = action_dim
             self.action_var = torch.full((action_dim,), action_std_init * action_std_init).to(device)
-
         # actor
         if has_continuous_action_space :
             self.actor = nn.Sequential(
@@ -73,8 +60,6 @@ class ActorCritic(nn.Module):
                             nn.Linear(64, action_dim),
                             nn.Softmax(dim=-1)
                         )
-
-        
         # critic
         self.critic = nn.Sequential(
                         nn.Linear(state_dim, 64),
@@ -85,7 +70,6 @@ class ActorCritic(nn.Module):
                     )
         
     def set_action_std(self, new_action_std):
-
         if self.has_continuous_action_space:
             self.action_var = torch.full((self.action_dim,), new_action_std * new_action_std).to(device)
         else:
@@ -93,13 +77,10 @@ class ActorCritic(nn.Module):
             print("WARNING : Calling ActorCritic::set_action_std() on discrete action space policy")
             print("--------------------------------------------------------------------------------------------")
 
-
     def forward(self):
         raise NotImplementedError
     
-
     def act(self, state):
-
         if self.has_continuous_action_space:
             action_mean = self.actor(state)
             cov_mat = torch.diag(self.action_var).unsqueeze(dim=0)
@@ -113,7 +94,6 @@ class ActorCritic(nn.Module):
         
         return action.detach(), action_logprob.detach()
     
-
     def evaluate(self, state, action):
 
         if self.has_continuous_action_space:
@@ -126,7 +106,6 @@ class ActorCritic(nn.Module):
             # For Single Action Environments.
             if self.action_dim == 1:
                 action = action.reshape(-1, self.action_dim)
-
         else:
             action_probs = self.actor(state)
             dist = Categorical(action_probs)
@@ -162,23 +141,18 @@ class PPO:
         
         self.MseLoss = nn.MSELoss()
 
-
     def set_action_std(self, new_action_std):
-        
         if self.has_continuous_action_space:
             self.action_std = new_action_std
             self.policy.set_action_std(new_action_std)
             self.policy_old.set_action_std(new_action_std)
-        
         else:
             print("--------------------------------------------------------------------------------------------")
             print("WARNING : Calling PPO::set_action_std() on discrete action space policy")
             print("--------------------------------------------------------------------------------------------")
 
-
     def decay_action_std(self, action_std_decay_rate, min_action_std):
         print("--------------------------------------------------------------------------------------------")
-
         if self.has_continuous_action_space:
             self.action_std = self.action_std - action_std_decay_rate
             self.action_std = round(self.action_std, 4)
@@ -191,9 +165,7 @@ class PPO:
 
         else:
             print("WARNING : Calling PPO::decay_action_std() on discrete action space policy")
-
         print("--------------------------------------------------------------------------------------------")
-
 
     def select_action(self, state):
 
@@ -207,7 +179,6 @@ class PPO:
             self.buffer.logprobs.append(action_logprob)
 
             return action.detach().cpu().numpy().flatten()
-
         else:
             with torch.no_grad():
                 state = torch.FloatTensor(state).to(device)
@@ -219,9 +190,7 @@ class PPO:
 
             return action.item()
 
-
     def update(self):
-
         # Monte Carlo estimate of returns
         rewards = []
         discounted_reward = 0
@@ -240,7 +209,6 @@ class PPO:
         old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(device)
         old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(device)
 
-        
         # Optimize policy for K epochs
         for _ in range(self.K_epochs):
 
@@ -272,11 +240,9 @@ class PPO:
         # clear buffer
         self.buffer.clear()
     
-    
     def save(self, checkpoint_path):
         torch.save(self.policy_old.state_dict(), checkpoint_path)
    
-
     def load(self, checkpoint_path):
         self.policy_old.load_state_dict(torch.load(checkpoint_path, map_location=lambda storage, loc: storage))
         self.policy.load_state_dict(torch.load(checkpoint_path, map_location=lambda storage, loc: storage))
