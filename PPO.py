@@ -23,6 +23,7 @@ class RolloutBuffer:
         self.states = []
         self.logprobs = []
         self.rewards = []
+        self.state_values = []
         self.is_terminals = []
     
     def clear(self):
@@ -30,6 +31,7 @@ class RolloutBuffer:
         del self.states[:]
         del self.logprobs[:]
         del self.rewards[:]
+        del self.state_values[:]
         del self.is_terminals[:]
 
 
@@ -81,6 +83,7 @@ class ActorCritic(nn.Module):
         raise NotImplementedError
     
     def act(self, state):
+
         if self.has_continuous_action_space:
             action_mean = self.actor(state)
             cov_mat = torch.diag(self.action_var).unsqueeze(dim=0)
@@ -91,8 +94,9 @@ class ActorCritic(nn.Module):
 
         action = dist.sample()
         action_logprob = dist.log_prob(action)
-        
-        return action.detach(), action_logprob.detach()
+        state_val = self.critic(state)
+
+        return action.detach(), action_logprob.detach(), state_val.detach()
     
     def evaluate(self, state, action):
 
@@ -172,21 +176,23 @@ class PPO:
         if self.has_continuous_action_space:
             with torch.no_grad():
                 state = torch.FloatTensor(state).to(device)
-                action, action_logprob = self.policy_old.act(state)
+                action, action_logprob, state_val = self.policy_old.act(state)
 
             self.buffer.states.append(state)
             self.buffer.actions.append(action)
             self.buffer.logprobs.append(action_logprob)
+            self.buffer.state_values.append(state_val)
 
             return action.detach().cpu().numpy().flatten()
         else:
             with torch.no_grad():
                 state = torch.FloatTensor(state).to(device)
-                action, action_logprob = self.policy_old.act(state)
+                action, action_logprob, state_val = self.policy_old.act(state)
             
             self.buffer.states.append(state)
             self.buffer.actions.append(action)
             self.buffer.logprobs.append(action_logprob)
+            self.buffer.state_values.append(state_val)
 
             return action.item()
 
@@ -208,6 +214,10 @@ class PPO:
         old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach().to(device)
         old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(device)
         old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(device)
+        old_state_values = torch.squeeze(torch.stack(self.buffer.state_values, dim=0)).detach().to(device)
+
+        # calculate advantages
+        advantages = rewards.detach() - old_state_values.detach()
 
         # Optimize policy for K epochs
         for _ in range(self.K_epochs):
@@ -221,13 +231,12 @@ class PPO:
             # Finding the ratio (pi_theta / pi_theta__old)
             ratios = torch.exp(logprobs - old_logprobs.detach())
 
-            # Finding Surrogate Loss
-            advantages = rewards - state_values.detach()   
+            # Finding Surrogate Loss  
             surr1 = ratios * advantages
             surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
 
             # final loss of clipped objective PPO
-            loss = -torch.min(surr1, surr2) + 0.5*self.MseLoss(state_values, rewards) - 0.01*dist_entropy
+            loss = -torch.min(surr1, surr2) + 0.5 * self.MseLoss(state_values, rewards) - 0.01 * dist_entropy
             
             # take gradient step
             self.optimizer.zero_grad()
